@@ -1,0 +1,15 @@
+# DEVELOPMENT dependencies: they are not required to run the application. They
+# regenerate the versioned test documents under backend/tests/assets/ through
+# backend/tests/make_assets.py, and support ONE suite:
+# backend/tests/restore_marks_stress_test.py. Its [B] battery ("real round trips")
+# reopens restored files with third-party libraries to verify that real readers
+# still accept them. Without these libraries that battery stops; other suites do
+# not use them.
+#
+# The backend DOES NOT use these libraries: it reads and rewrites OOXML itself
+# using ZIP and XML (see app/engine/docx.py, xlsx.py, pptx.py). These packages are
+# needed for the opposite direction: BUILDING documents.
+python-docx
+openpyxl
+python-pptx
+pypdf

@@ -1,0 +1,19 @@
+Milano, 12 marzo
+
+Spett.le Global Trade SPA
+Via Roma 10, 20121 Milano (MI)
+
+Oggetto: conferma d'ordine e dati di fatturazione
+
+Con la presente confermiamo l'ordine ricevuto in data odierna. La fatturazione
+avverra' a nome di Acme Forniture SRL, partita IVA 01234567897, codice fiscale del legale
+rappresentante RSSMRA85M01H501Z.
+
+Il pagamento va disposto sul conto IT65A0542811101000000123456.
+
+Per ogni chiarimento resta a disposizione il nostro referente Luigi Verdi,
+raggiungibile all'indirizzo mario.rossi@esempio.it oppure al numero +39 02 1234567.
+
+Distinti saluti
+Luigi Verdi
+Acme Forniture SRL

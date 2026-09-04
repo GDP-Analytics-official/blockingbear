@@ -1,0 +1,99 @@
+{
+  "shared": {
+    "noSpend": "Nessuna spesa registrata nel periodo.",
+    "showTable": "Mostra la tabella",
+    "showChart": "Mostra il grafico",
+    "exportCsv": "Esporta CSV",
+    "exportXlsx": "Esporta XLSX",
+    "exportCsvAria": "Esporta {{title}} in CSV",
+    "exportXlsxAria": "Esporta {{title}} in XLSX",
+    "sheetName": "Dati",
+    "billions": "mld",
+    "millions": "mln"
+  },
+  "analytics": {
+    "title": "Analytics",
+    "subtitle": "dati OpenRouter, interrogati adesso",
+    "refresh": "Aggiorna",
+    "period": "{{count}} giorni",
+    "tile": {
+      "balance": "Saldo residuo",
+      "spend": "Spesa · {{count}} giorni",
+      "spendHint": "chiavi BlockingBear",
+      "requests": "Richieste",
+      "tokens": "Token",
+      "lastDays": "negli ultimi {{count}} giorni"
+    },
+    "byDay": {
+      "title": "Spesa per giorno, per utente",
+      "aria": "Spesa per giorno, impilata per utente",
+      "export": "spesa-giorno-utente-{{days}}gg",
+      "day": "Giorno"
+    },
+    "byModel": {
+      "title": "Spesa per modello",
+      "subtitle": "primi {{count}} nel grafico, tutti in tabella",
+      "export": "spesa-modello-utente-{{days}}gg",
+      "model": "Modello",
+      "requests": "Richieste",
+      "requestsShort": "{{n}} rich."
+    },
+    "byUser": {
+      "title": "Spesa per utente",
+      "subtitle": "ogni colonna spaccata per modello",
+      "aria": "Spesa per utente, impilata per modello",
+      "export": "spesa-utente-modello-{{days}}gg",
+      "user": "Utente"
+    },
+    "otherModels": "Altri modelli",
+    "total": "Totale"
+  },
+  "keys": {
+    "title": "API keys",
+    "subtitle": "una chiave OpenRouter per utente; consumi e limiti interrogati adesso",
+    "refresh": "Aggiorna",
+    "sectionTitle": "Chiavi e limiti",
+    "sectionHint": "i limiti si azzerano a mezzanotte UTC",
+    "table": {
+      "user": "Utente / chiave",
+      "today": "Oggi",
+      "week": "Settimana",
+      "month": "Mese",
+      "total": "Totale",
+      "limit": "Limite"
+    },
+    "noLimit": "nessuno",
+    "noReset": "senza azzeramento",
+    "remaining": " · residuo {{value}}",
+    "editLimit": "Modifica limite",
+    "editLimitAria": "Modifica limite di {{user}}",
+    "withoutKey": "Senza chiave: {{users}} (creala dalla pagina Utenti).",
+    "reset": {
+      "daily": "giornaliero",
+      "weekly": "settimanale",
+      "monthly": "mensile"
+    },
+    "dialog": {
+      "title": "Limite di spesa",
+      "description": "Tetto in USD per «{{user}}»: raggiunto il limite, OpenRouter rifiuta le sue richieste finché non si azzera.",
+      "limit": "Limite (USD, vuoto = nessuno)",
+      "limitPlaceholder": "es. 20",
+      "reset": "Azzeramento",
+      "resetNever": "mai (tetto una tantum)",
+      "resetDaily": "ogni giorno",
+      "resetWeekly": "ogni settimana",
+      "resetMonthly": "ogni mese",
+      "saved": "Limite aggiornato"
+    },
+    "management": {
+      "title": "Management key OpenRouter",
+      "help": "Non fa inferenza: crea la chiave «blockingbear-<i>username</i>» di ogni utente e legge consumi e saldo. Si crea su openrouter.ai → Settings → Management Keys. Sostituirla non tocca le chiavi degli utenti già create.",
+      "current": "In uso",
+      "missing": "Non impostata",
+      "balance": "saldo account: ${{value}}",
+      "replace": "Sostituisci la management key",
+      "insert": "Inserisci la management key",
+      "saved": "Management key verificata e salvata"
+    }
+  }
+}

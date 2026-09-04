@@ -1,0 +1,15 @@
+# Librerie disponibili al modello nella sandbox (dichiarate nel tool
+# description di execute_python — se aggiungi qui, aggiorna anche quella).
+# Versioni PINNATE: l'immagine e' un ambiente riproducibile, e il modello
+# scrive codice contando su queste versioni. Solo le dipendenze dirette:
+# le transitive le risolve pip.
+pandas==3.0.5
+numpy==2.5.1
+openpyxl==3.1.5
+xlsxwriter==3.2.9
+matplotlib==3.11.1
+pypdf==6.15.0
+python-docx==1.2.0
+python-pptx==1.0.2
+pillow==12.3.0
+tabulate==0.10.0

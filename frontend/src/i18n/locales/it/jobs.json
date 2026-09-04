@@ -1,0 +1,26 @@
+{
+  "heading": "Elaborazioni",
+  "status": {
+    "uploading": "Caricamento del file…",
+    "canceling": "Annullamento…",
+    "queuedNext": "In coda — prossimo",
+    "queuedAfter": "In coda — {{count}} davanti",
+    "processing": "Anonimizzazione in corso…",
+    "phaseOf": "Fase {{index}} di {{total}} — {{phase}}",
+    "phaseAlone": "{{phase}}…",
+    "done": "Pronto",
+    "canceled": "Annullato",
+    "failed": "Errore"
+  },
+  "phase": {
+    "image_ocr": "OCR immagini",
+    "analysis": "Analisi",
+    "analysis_sample": "Analisi campione",
+    "analysis_columns": "Analisi colonne",
+    "analysis_values": "Analisi valori",
+    "redaction": "Redazione",
+    "preview": "Anteprima"
+  },
+  "open": "Apri",
+  "cancel": "Annulla elaborazione"
+}

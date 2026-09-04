@@ -1,0 +1,99 @@
+{
+  "tab": {
+    "compare": "Comparison",
+    "mapping": "Map ({{count}})"
+  },
+  "pane": {
+    "original": "Original",
+    "originalHint": "— drag over the text to anonymise more",
+    "anonymized": "Anonymised",
+    "anonymizedHint": "— hover a placeholder to reveal it",
+    "sealHint": "— draw a rectangle: whatever is underneath is removed from the file",
+    "sealToggle": "■ Seal area",
+    "sealToggleOn": "Done",
+    "sealToggleHint": "Draw a black rectangle that permanently removes the content underneath from the anonymised file"
+  },
+  "page": {
+    "alt": "page {{n}}",
+    "originalGone": "Original unavailable (upload the file again to see it)."
+  },
+  "nothing": "Nothing to anonymise",
+  "applying": "Applying the change: re-redacting the document from the original…",
+  "busy": "Processing under way on this file (OCR reprocessing or a column): the preview updates by itself when it finishes.",
+  "warn": {
+    "residual": "WARNING: {{count}} values are still readable in the PDF (residuals: {{values}}).",
+    "skipped": "{{count}} values were too short to redact and stay in the clear: {{values}}.",
+    "sealed_one": "One sealed area: the content under the black rectangles has been removed from the file and cannot be decoded (hover the rectangle to remove the seal).",
+    "sealed_other": "{{count}} sealed areas: the content under the black rectangles has been removed from the file and cannot be decoded (hover a rectangle to remove the seal).",
+    "truncated": "Partial preview: the sheet is large, so you only see the first rows of each tab here. The downloadable file is anonymised in full.",
+    "tableColumns": "Tabular sheet: the model analysed a sample of rows and these columns were anonymised in full: {{columns}}.",
+    "tableColumn": "“{{column}}” ({{sheet}}: {{values}} values → {{tag}})"
+  },
+  "box": {
+    "tooltipOriginal": "→ {{placeholder}}",
+    "tooltipAnon": "{{placeholder}} = {{value}}",
+    "ocrSuffix": " · Found by OCR",
+    "ocr": "Found by OCR",
+    "sealed": "Sealed area",
+    "sealedHelp": "The content under the rectangle has been removed from the anonymised file (it is not in the map and cannot be decoded).",
+    "removeSeal": "Remove seal",
+    "deanonOne": "Reveal {{placeholder}}",
+    "deanonAll": "Reveal every {{label}}"
+  },
+  "selection": {
+    "extracting": "Extracting the text…",
+    "noText": "No text in the selection.",
+    "noTextOcr": "No text in the selection, not even with OCR.",
+    "caption": "Selected text — tweak it if the selection is not precise",
+    "ocr": "This area has no selectable text (it is an image): the text was read with OCR.",
+    "noOcrCache": "This file was anonymised <b>without OCR</b>, so I cannot cover text inside images. ",
+    "noOcrReprocess": "Reprocess the file with OCR on (it goes into the queue, like uploads) and then repeat the selection.",
+    "notInOcrCache": "The OCR of the clipped area read text that does not appear in the reading taken at send time: anonymisation would not find it. Widen the selection (whole words or line) and try again.",
+    "noOcrResend": "Send again with OCR enabled in the attachments popup.",
+    "reprocess": "⟳ Reprocess with OCR",
+    "saveTerm": "Anonymise in future too (in my next documents and chats)",
+    "withTag": "with the tag",
+    "tagHint": "A running number is appended to the tag, so every value stays distinguishable: [TAG_1], [TAG_2], …",
+    "anonymize": "Anonymise everywhere"
+  },
+  "seal": {
+    "caption": "Seal this area",
+    "note": "Everything under the rectangle (text and images) will be <b>permanently removed</b> from the anonymised file: no entry in the map, not decodable. You can lift the seal from here, but downloaded copies stay sealed.",
+    "allPages": "Apply at the same position on every page",
+    "apply": "Seal",
+    "applyAll": "Seal on every page"
+  },
+  "column": {
+    "stripTitle": "Column {{col}} ({{sheet}}): click to anonymise or reveal the whole column",
+    "popTitle": "Column {{col}}",
+    "headerQuoted": " · “{{header}}”",
+    "analysing": "Analysing the column…",
+    "counts": "{{values}} distinct values · {{mapped}} already anonymised",
+    "busy": "This document already has processing under way.",
+    "anonymize": "Anonymise column",
+    "deanonymize": "Reveal column",
+    "where": "column <b>{{col}}</b> of sheet <b>{{sheet}}</b>",
+    "whereHeader": "column <b>{{col}}</b> of sheet <b>{{sheet}}</b> (“{{header}}”)",
+    "anonTitle": "Anonymise column {{col}} ({{sheet}})",
+    "anonBody": "The whole {{where}} will be anonymised: <b>{{values}}</b> distinct values{{mapped}}. It applies to the entire file, beyond the rows shown in the preview.",
+    "anonBodyMapped": ", of which <b>{{count}}</b> are already in the map",
+    "anonHow": "Every distinct value not yet in the map gets its own <code>[CUSTOM_n]</code> placeholder (values already mapped reuse theirs): no model analysis, the result is deterministic.",
+    "anonHowJob": " The processing is queued and you follow it from the sidebar, like uploads; meanwhile the document is locked against other changes.",
+    "anonHowSync": " The anonymisation happens straight away and the whole message is re-redacted, like the other changes in the preview.",
+    "deanonTitle": "Reveal column {{col}} ({{sheet}})",
+    "deanonBody": "The <b>{{count}}</b> placeholders covering the values of {{where}} will leave the decoding map and those values become readable again <b>wherever they appear in the document</b>, including other columns or sheets (placeholders work by value, not by position)."
+  },
+  "deanon": {
+    "titleOne": "Reveal {{placeholder}}",
+    "titleAll": "Reveal every {{label}}",
+    "action": "Reveal",
+    "bodyOne": "The value becomes readable again in <b>every</b> occurrence in the document and the placeholder leaves the decoding map.",
+    "bodyAll": "The {{count}} placeholders of category <code>{{label}}</code> become readable again in <b>every</b> occurrence and leave the decoding map.",
+    "andMore": "… and {{count}} more"
+  },
+  "mapping": {
+    "intro": "Each placeholder always stands for the same value in the document. The map stays on this server and is what makes decoding possible. Revealing a placeholder removes it from the document and from the map everywhere.",
+    "placeholder": "Placeholder",
+    "value": "Original value"
+  }
+}

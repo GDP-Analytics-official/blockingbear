@@ -1,0 +1,198 @@
+{
+  "title": "Chat",
+  "new": "New chat",
+  "empty": "No conversations.",
+  "search": {
+    "title": "Search chats",
+    "placeholder": "Search conversations…",
+    "noResults": "No conversations found.",
+    "hits_one": "{{count}} message",
+    "hits_other": "{{count}} messages"
+  },
+  "pickOne": "Pick a conversation or create a new one.",
+  "backToProject": "Project",
+  "restoredFrom": "Value restored from {{placeholder}}",
+  "code": {
+    "copy": "Copy",
+    "copyHelp": "Copy the code block",
+    "copied": "Copied",
+    "copyReal": "Copy with real values",
+    "copyRealHelp": "Literal replacement: check quoting and escaping of real values before running the code",
+    "copyRaw": "Copy with placeholders",
+    "copyRawHelp": "Copy the canonical form with placeholders",
+    "restoredHelp": "Value shown in place of {{placeholder}}; the canonical code retains the placeholder"
+  },
+  "reasoning": {
+    "label": "Reasoning",
+    "live": "Reasoning…",
+    "show": "Show the full reasoning",
+    "hide": "Hide the reasoning"
+  },
+  "live": {
+    "running": "Running the code…",
+    "searching": "Searching the web…",
+    "reading": "Reading the page…",
+    "ocr": "Reading images (OCR)…",
+    "writing": "Writing…",
+    "thinking": "Thinking…",
+    "waiting": "Waiting for the model…"
+  },
+  "step": {
+    "code": {
+      "running": "Running code…",
+      "failed": "Run: {{outcome}}",
+      "done": "Code executed"
+    },
+    "search": {
+      "running": "Web search…",
+      "failed": "Web search: {{outcome}}",
+      "done_one": "Web search · {{count}} result",
+      "done_other": "Web search · {{count}} results",
+      "done": "Web search",
+      "query": "Query"
+    },
+    "page": {
+      "running": "Reading page…",
+      "failed": "Page read: {{outcome}}",
+      "done": "Page read"
+    },
+    "ocr": {
+      "running": "Reading images (OCR)…",
+      "failed": "Image read: {{outcome}}",
+      "done_one": "Images read (OCR) · {{count}} image",
+      "done_other": "Images read (OCR) · {{count}} images",
+      "done": "Images read (OCR)",
+      "image": "Image {{index}}",
+      "page": " · page {{page}}"
+    }
+  },
+  "attachment": {
+    "restored": "Real values restored",
+    "restoredWith": "Real values restored · {{what}}",
+    "withCaveats": " · with caveats",
+    "stillProtected": "Artifact still anonymised (contains TAGs)",
+    "stillPlaceholders": "Still contains {{count}} placeholders",
+    "anonymized": "Anonymised",
+    "anonymizedCount": "Anonymised · {{count}} entities",
+    "failed": "Anonymisation failed on the previous attempt",
+    "pending": "Will be anonymised on send",
+    "sentPlain": "Sent in the clear",
+    "willSendPlain": "Will be sent in the clear",
+    "remove": "Remove",
+    "removeHelp": "Remove the attachment",
+    "downloadAnon": "Anonymised",
+    "downloadAnonHelp": "Download the anonymised copy (the one the model saw)",
+    "downloadOriginal": "Original",
+    "downloadOriginalHelp": "Download the original, non-anonymised file",
+    "download": "Download",
+    "downloadHelp": "Download {{file}}",
+    "downloadShort": "download"
+  },
+  "message": {
+    "copy": "Copy message text",
+    "copied": "Copied",
+    "copyFailed": "Copy failed: the browser denied clipboard access.",
+    "anonymized": "Anonymised",
+    "canceled": "Turn stopped",
+    "plain": "Sent in the clear",
+    "tokens": " · {{count}} tokens",
+    "timeTitle": "Response time: {{response}} from the model's first sign of activity (reasoning, text or tool call); {{total}} from the request being sent, provider queues included."
+  },
+  "privacy": {
+    "relaxed": "Privacy rules relaxed for this conversation: the provider may keep the data sent and use it to train its models.",
+    "restore": "Restore",
+    "blocked": "<b>{{model}}</b> has no Zero Data Retention provider: with privacy rules on, the request is refused. Choose another model",
+    "blockedAllowed": ", or use it anyway for this conversation.",
+    "blockedAdmin": ": non-compliant models are disabled under Settings → LLM chat.",
+    "blockedUser": ": non-compliant models are not allowed on this server.",
+    "useAnyway": "Use anyway"
+  },
+  "newDialog": {
+    "title": "What kind of conversation?",
+    "description": "The choice applies to the whole chat and cannot be changed.",
+    "anon": {
+      "title": "Anonymised chat",
+      "l1": "Every message and every attachment is anonymised before it leaves.",
+      "l2": "The model receives placeholders; you see the real values.",
+      "l3": "Documents with extractable text only: no images or scans."
+    },
+    "plain": {
+      "title": "Standard chat",
+      "l1": "Messages and attachments leave as they are, with no anonymisation.",
+      "l2": "Any format, images included.",
+      "l3": "Use only for content that can leave as it is.",
+      "required": "Disabled by the administrator: in this installation chats must always be anonymized."
+    }
+  },
+  "anonProgress": {
+    "yourMessage": "Your message",
+    "heading": "Anonymising — {{current}} of {{total}}",
+    "footer": "Nothing leaves before it finishes: the model will only get placeholders.",
+    "preparing": "Preparing…",
+    "stage": {
+      "redact": "Rewriting",
+      "preview": "Preview",
+      "analyze": "Analysis"
+    },
+    "phaseOf": "{{stage}} — step {{index}} of {{total}}: {{phase}}",
+    "phaseAlone": "{{stage}} — {{phase}}…",
+    "stageAlone": "{{stage}}…"
+  },
+  "ocr": {
+    "title": "Images found in the attachments",
+    "found_one": "One image was found in the attachments of this message.",
+    "found_other": "{{count}} images were found in the attachments of this message.",
+    "question": "Do you want to use OCR to analyse them and cover the sensitive information found inside? It takes a few extra seconds per page. Without OCR the images stay as they were (and image attachments or scans cannot be sent).",
+    "textOnly": "No, text only",
+    "use": "Yes, use OCR"
+  },
+  "merge": {
+    "title": "Entities to merge?",
+    "description": "Anonymisation has finished and <b>nothing has left yet</b>. The detector kept these entities apart, but they could be the same: deciding now, the model knows it for this very message. The files are not touched — it is the system message that says the two placeholders mean the same entity.",
+    "cancel": "Cancel sending",
+    "continue": "Continue and send"
+  },
+  "banner": {
+    "errors_one": "{{count}} error",
+    "errors_other": "{{count}} errors",
+    "errorsHint": "Some features are unavailable: click for details.",
+    "sandboxOff": "Sandbox unavailable",
+    "sandboxOffHelp": "The sandbox Docker container is not running: file analysis is disabled.",
+    "webOff": "Web search unavailable",
+    "webOffHelp": "The browser Docker container is not running: web search is disabled.",
+    "keyMissing": "OpenRouter key not configured: ask your administrator (Settings).",
+    "modelNotAllowed": "The model <b>{{model}}</b> is not among those allowed by the administrator: pick another one from the selector to continue.",
+    "costTitle": "Cost of this conversation: {{cost}} $ · {{prompt}} tokens in, {{completion}} out",
+    "context": "Context {{used}} / {{max}} · {{pct}}%",
+    "contextTitle": "Model context usage: {{used}} tokens out of {{max}} available ({{pct}}%), measured on the latest response. Updated at the end of each turn.",
+    "anonRequired": "Anonymised conversation (made mandatory by your administrator)",
+    "anonOn": "Anonymised conversation",
+    "review": "See the anonymised text and files before sending",
+    "reviewHint": "Before sending you will see the original and the anonymised version of the message and its attachments, with the option to adjust the anonymisation."
+  },
+  "thread": {
+    "follow": "Follow the answer",
+    "toBottom": "Go to the bottom"
+  },
+  "composer": {
+    "pendingTitle": "Attached to the next message:",
+    "uploading": " · {{size}} · uploading…",
+    "queued": " · {{size}} · queued",
+    "attach": "Attach one or more files",
+    "placeholder": "Write a message…  (Enter to send, Shift+Enter for a new line)",
+    "stop": "Stop",
+    "stopping": "Stopping…",
+    "send": "Send",
+    "waitUploads": "Wait for the attachments to finish uploading",
+    "aiDisclosure": "Responses are generated by an artificial intelligence model and may contain mistakes or inaccuracies."
+  },
+  "error": {
+    "pickModel": "Choose a model first.",
+    "sendFailed": "Sending failed.",
+    "canceled": "Sending cancelled: nothing left."
+  },
+  "confirmDelete": {
+    "title": "Delete this conversation?",
+    "text": "“{{title}}” will be deleted along with its messages, attachments and the anonymization registry. This cannot be undone."
+  }
+}

@@ -1,0 +1,69 @@
+{
+  "title": "Configuration",
+  "step": "Step {{n}} of {{total}}",
+  "back": "Back",
+  "next": "Next",
+  "skip": "Skip",
+  "welcome": {
+    "title": "Welcome to BlockingBear",
+    "text": "The app is installed correctly. Follow these short configuration steps to get started.",
+    "start": "Let's start"
+  },
+  "key": {
+    "title": "OpenRouter management key",
+    "intro": "Enter your OpenRouter Management key. Note: <u>it is not a normal API key</u>, read below how to get it.",
+    "howTitle": "How to get it",
+    "how1": "Open this <a>link</a>, or go to the “Management Keys” section of OpenRouter.",
+    "how2": "Choose “+ New key”, give it a name (e.g. blockingbear) and copy the value.",
+    "how3": "Paste it below: it is verified with OpenRouter before being saved.",
+    "label": "Management key",
+    "already": "A management key was already saved by a previous attempt. You can keep it or replace it.",
+    "keep": "Keep the saved one",
+    "save": "Verify and save",
+    "saved": "Management key verified and saved"
+  },
+  "admin": {
+    "title": "Admin password",
+    "intro": "The administrator account is named <b>admin</b>, choose its password.",
+    "username": "Username",
+    "password": "Password (at least 8 characters)",
+    "confirm": "Confirm password",
+    "mismatch": "The two passwords do not match.",
+    "create": "Create the administrator",
+    "created": "Administrator created",
+    "already": "The “admin” administrator already exists and has its OpenRouter key. Continue with the next step.",
+    "recreate": "Recreate admin"
+  },
+  "terms": {
+    "title": "Terms to always anonymize",
+    "intro": "Optional: the model automatically recognizes the personal information to anonymize, but it is not perfect. We recommend entering below the information (for example the company name or first and last names) that you are sure you always want anonymized. You can edit the list later from the Settings page.",
+    "done": "Configuration complete!"
+  },
+  "categories": {
+    "title": "Categories to anonymize",
+    "intro": "Choose which categories of information the model must anonymize for every user. The ones already enabled are the most reliable: you can widen the selection later from the Settings page, or narrow it per project or chat.",
+    "allWarning": "Warning: enabling every category increases the likelihood of false positives (text anonymized by mistake). At least at the beginning it is advisable to proceed with the default categories.",
+    "default": "Default"
+  },
+  "chat": {
+    "title": "Chat rules",
+    "intro": "Two choices that apply to every user. They can be changed at any time from the Settings page.",
+    "policy": "Chat anonymization",
+    "policyOptional": "Optional",
+    "policyRequired": "Required",
+    "policyHelp": "You can choose whether to force every user to always run anonymized chats only, or not. With the “Optional” setting, normal chats without the anonymization engine are allowed too.",
+    "zdr": "Allow models without Zero Data Retention",
+    "zdrHelp": "Some models use providers that declare they collect chat data. With this flag off, models without compliant providers cannot be used.",
+    "finish": "Save and start"
+  },
+  "model": {
+    "title": "Default chat model",
+    "intro": "Optional: the model a new conversation opens with by default, for every user (each user can later pick their own). It can be changed at any time from the Settings page.",
+    "none": "None (each user chooses)",
+    "noCatalog": "The model catalogue is not available right now: you can set the model later from Settings."
+  },
+  "access": {
+    "title": "Models visible to users",
+    "intro": "Optional: non-administrator users can see the whole catalogue or only the models you select here. The default model chosen in the previous step is always included. It can be changed at any time from the Settings page."
+  }
+}

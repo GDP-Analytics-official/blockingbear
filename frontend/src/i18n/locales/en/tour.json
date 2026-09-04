@@ -1,0 +1,65 @@
+{
+  "btn": {
+    "next": "Next",
+    "prev": "Back",
+    "done": "Got it"
+  },
+  "new": {
+    "welcome": {
+      "title": "Welcome to BlockingBear",
+      "body": "Follow this short tutorial to learn how the application works."
+    },
+    "nav": {
+      "title": "Chats and Projects",
+      "body": "<b>New Chat</b> for a single conversation. <b>Projects</b> to work on a set of documents: upload them once, anonymize them and chat about them."
+    },
+    "mode": {
+      "title": "Anonymized or plain chat",
+      "body": "In an <b>anonymized</b> chat personal data is replaced before it leaves the server, and answers come back with the real names. A <b>plain</b> chat sends the text as is. You choose once, at the start.",
+      "bodyRequired": "In an <b>anonymized</b> chat personal data is replaced before it leaves the server, and answers come back with the real names. On this server the administrator made it mandatory: plain chat is not available."
+    },
+    "menu": {
+      "title": "Your profile",
+      "body": "From here you open <b>Settings</b> (password, terms to always anonymize, preferred model) and <b>Logout</b>. The flag next to it switches the interface language."
+    }
+  },
+  "chat": {
+    "model": {
+      "title": "The model",
+      "body": "Pick which model handles the conversation. Changing it from this dropdown affects this chat only; to use a different default, choose one from the Settings page."
+    },
+    "options": {
+      "title": "Model options",
+      "body": "Here are the conversation options, such as web search and some technical model settings. If you're not sure what they are, the defaults are fine."
+    },
+    "anonTags": {
+      "title": "Categories to anonymize",
+      "body": "Here you decide which kinds of personal data (names, addresses, phone numbers, …) are anonymized in this chat before leaving the server."
+    },
+    "review": {
+      "title": "Check before sending",
+      "body": "With this box ticked, before every send you see the original and the anonymized version of the message and attachments, and you can adjust the anonymization. Without it, the message goes out right away."
+    },
+    "composer": {
+      "title": "Write and attach",
+      "body": "Type your message and send with <b>Enter</b> (Shift+Enter for a new line). Click the paperclip icon to attach documents: in an \"anonymized\" chat they are anonymized before being sent."
+    }
+  },
+  "project": {
+    "drop": {
+      "title": "Upload the documents",
+      "bodyAnon": "Drag the project documents here, or click to pick them. Each file is anonymized and then waits: <b>you must confirm it before it enters the chats</b>, after checking the result.",
+      "bodyPlain": "Drag the project documents here, or click to pick them. Once uploaded they are available in the project chats."
+    },
+    "newChat": {
+      "title": "Chat about the documents",
+      "body": "From here you open a project chat: the model reads the confirmed documents and answers based on them."
+    }
+  },
+  "projects": {
+    "new": {
+      "title": "Your first project",
+      "body": "A project gathers several documents under one anonymization map: the same names become the same placeholders across all its files and chats. Start here."
+    }
+  }
+}

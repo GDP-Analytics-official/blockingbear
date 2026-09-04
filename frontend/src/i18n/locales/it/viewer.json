@@ -1,0 +1,99 @@
+{
+  "tab": {
+    "compare": "Confronto",
+    "mapping": "Mappa ({{count}})"
+  },
+  "pane": {
+    "original": "Originale",
+    "originalHint": "— trascina sul testo per anonimizzare altro",
+    "anonymized": "Anonimizzato",
+    "anonymizedHint": "— passa sui segnaposto per deanonimizzare",
+    "sealHint": "— traccia un rettangolo: quello che c'è sotto sarà rimosso dal file",
+    "sealToggle": "■ Sigilla area",
+    "sealToggleOn": "Fine",
+    "sealToggleHint": "Disegna un rettangolo nero che rimuove definitivamente il contenuto sottostante dal file anonimizzato"
+  },
+  "page": {
+    "alt": "pagina {{n}}",
+    "originalGone": "Originale non disponibile (ricarica il file per rivederlo)."
+  },
+  "nothing": "Nessun dato da anonimizzare",
+  "applying": "Applico la modifica: ri-redigo il documento dall'originale…",
+  "busy": "Elaborazione in corso su questo file (rielaborazione con OCR o colonna): al termine l'anteprima si aggiorna da sola.",
+  "warn": {
+    "residual": "ATTENZIONE: {{count}} valori risultano ancora leggibili nel PDF (residui: {{values}}).",
+    "skipped": "{{count}} valori troppo corti non sono stati redatti e restano in chiaro: {{values}}.",
+    "sealed_one": "Un'area sigillata: il contenuto sotto i rettangoli neri è stato rimosso dal file e non è decodificabile (passa sul rettangolo per rimuovere il sigillo).",
+    "sealed_other": "{{count}} aree sigillate: il contenuto sotto i rettangoli neri è stato rimosso dal file e non è decodificabile (passa sul rettangolo per rimuovere il sigillo).",
+    "truncated": "Anteprima parziale: il foglio è grande, qui vedi solo le prime righe di ogni scheda. Il file scaricabile è comunque anonimizzato per intero.",
+    "tableColumns": "Foglio tabellare: il modello ha analizzato un campione di righe e queste colonne sono state anonimizzate per intero: {{columns}}.",
+    "tableColumn": "«{{column}}» ({{sheet}}: {{values}} valori → {{tag}})"
+  },
+  "box": {
+    "tooltipOriginal": "→ {{placeholder}}",
+    "tooltipAnon": "{{placeholder}} = {{value}}",
+    "ocrSuffix": " · Identificato dall'OCR",
+    "ocr": "Identificato dall'OCR",
+    "sealed": "Area sigillata",
+    "sealedHelp": "Il contenuto sotto il rettangolo è stato rimosso dal file anonimizzato (non è in mappa e non si può decodificare).",
+    "removeSeal": "Rimuovi sigillo",
+    "deanonOne": "Deanonimizza {{placeholder}}",
+    "deanonAll": "Deanonimizza tutti i {{label}}"
+  },
+  "selection": {
+    "extracting": "Estraggo il testo…",
+    "noText": "Nessun testo nella selezione.",
+    "noTextOcr": "Nessun testo nella selezione, nemmeno con l'OCR.",
+    "caption": "Testo selezionato — ritoccalo se la selezione non è precisa",
+    "ocr": "Quest'area non ha testo selezionabile (è un'immagine): il testo è stato letto con l'OCR.",
+    "noOcrCache": "Questo file è stato anonimizzato <b>senza OCR</b>, quindi non posso coprire il testo delle immagini. ",
+    "noOcrReprocess": "Rielabora il file con l'OCR attivo (l'elaborazione va in coda, come i caricamenti) e poi ripeti la selezione.",
+    "notInOcrCache": "L'OCR del ritaglio ha letto un testo che non compare nella lettura fatta all'invio: l'anonimizzazione non lo troverebbe. Allarga la selezione (parole o riga intera) e riprova.",
+    "noOcrResend": "Ripeti l'invio attivando l'OCR nel popup degli allegati.",
+    "reprocess": "⟳ Rielabora con OCR",
+    "saveTerm": "Anonimizza anche in futuro (nei miei prossimi documenti e chat)",
+    "withTag": "con il tag",
+    "tagHint": "Al tag viene aggiunto un numero progressivo, così ogni valore resta distinguibile: [TAG_1], [TAG_2], …",
+    "anonymize": "Anonimizza ovunque"
+  },
+  "seal": {
+    "caption": "Sigilla quest'area",
+    "note": "Tutto ciò che sta sotto il rettangolo (testo e immagini) verrà <b>rimosso definitivamente</b> dal file anonimizzato: nessuna voce in mappa, non decodificabile. Potrai togliere il sigillo da qui, ma le copie scaricate restano sigillate.",
+    "allPages": "Applica nella stessa posizione su tutte le pagine",
+    "apply": "Sigilla",
+    "applyAll": "Sigilla su tutte le pagine"
+  },
+  "column": {
+    "stripTitle": "Colonna {{col}} ({{sheet}}): clic per anonimizzare o deanonimizzare l'intera colonna",
+    "popTitle": "Colonna {{col}}",
+    "headerQuoted": " · «{{header}}»",
+    "analysing": "Analizzo la colonna…",
+    "counts": "{{values}} valori distinti · {{mapped}} già anonimizzati",
+    "busy": "Su questo documento c'è già un'elaborazione in corso.",
+    "anonymize": "Anonimizza colonna",
+    "deanonymize": "Deanonimizza colonna",
+    "where": "colonna <b>{{col}}</b> del foglio <b>{{sheet}}</b>",
+    "whereHeader": "colonna <b>{{col}}</b> del foglio <b>{{sheet}}</b> («{{header}}»)",
+    "anonTitle": "Anonimizza la colonna {{col}} ({{sheet}})",
+    "anonBody": "L'intera {{where}} verrà anonimizzata: <b>{{values}}</b> valori distinti{{mapped}}. Vale su tutto il file, anche oltre le righe mostrate in anteprima.",
+    "anonBodyMapped": ", di cui <b>{{count}}</b> già in mappa",
+    "anonHow": "Ogni valore distinto non ancora in mappa riceve un segnaposto dedicato <code>[CUSTOM_n]</code> (chi è già in mappa riusa il suo): nessuna analisi del modello, il risultato è deterministico.",
+    "anonHowJob": " L'elaborazione va in coda e la segui dalla barra laterale, come per i caricamenti; nel frattempo il documento resta bloccato alle altre modifiche.",
+    "anonHowSync": " L'anonimizzazione avviene subito e tutto l'invio viene ri-redatto, come per le altre modifiche dell'anteprima.",
+    "deanonTitle": "Deanonimizza la colonna {{col}} ({{sheet}})",
+    "deanonBody": "I <b>{{count}}</b> segnaposto che coprono i valori della {{where}} usciranno dalla mappa di decodifica e quei valori torneranno leggibili <b>ovunque compaiano nel documento</b>, anche in altre colonne o fogli (i segnaposto valgono per valore, non per posizione)."
+  },
+  "deanon": {
+    "titleOne": "Deanonimizza {{placeholder}}",
+    "titleAll": "Deanonimizza tutti i {{label}}",
+    "action": "Deanonimizza",
+    "bodyOne": "Il valore tornerà leggibile in <b>tutte</b> le occorrenze nel documento e il segnaposto uscirà dalla mappa di decodifica.",
+    "bodyAll": "I {{count}} segnaposto della categoria <code>{{label}}</code> torneranno leggibili in <b>tutte</b> le occorrenze e usciranno dalla mappa di decodifica.",
+    "andMore": "… e altri {{count}}"
+  },
+  "mapping": {
+    "intro": "Ogni segnaposto corrisponde sempre allo stesso valore nel documento. La mappa resta su questo server e serve per la decodifica. Deanonimizzare un segnaposto lo rimuove ovunque dal documento e dalla mappa.",
+    "placeholder": "Segnaposto",
+    "value": "Valore originale"
+  }
+}

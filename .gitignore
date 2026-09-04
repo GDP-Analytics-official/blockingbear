@@ -1,0 +1,65 @@
+# Python
+backend/.venv/
+__pycache__/
+*.pyc
+
+# Model downloaded from Hugging Face (re-downloadable, ~1 GB)
+backend/models/
+
+# Runtime data: database, JWT secret, anonymized PDFs, smoke-test output
+backend/data/
+# Container deployment data directory (docker-compose.yaml: ./data)
+/data/
+
+# Test-suite output: LibreOffice profiles, regenerated PDFs, JSONL logs.
+# Suites write here next to their assets; the synthetic assets themselves ARE
+# versioned (backend/tests/assets/) and are required by a fresh clone.
+backend/tests/data/
+
+# Every local configuration file may contain credentials (Postgres passwords,
+# OpenRouter keys). The ONLY exception is the secret-free template, which must
+# be versioned.
+#
+# The two explicit entries are intentionally redundant: they remain a safety net
+# if somebody later "simplifies" the glob above. These files have held live
+# credentials, and a file accidentally published to a public repository cannot
+# truly be recalled — forks and GitHub caches remain.
+.env*
+.env.production
+backend/.env.production
+!.env.example
+!**/.env.example
+
+# Node
+frontend/node_modules/
+frontend/dist/
+
+# Cloned upstream repository (reference only)
+vendor/
+
+# Local test documents outside the repository (versioned fixtures live in
+# backend/tests/assets/ and are synthetic). Intentionally ANCHORED at the root:
+# without the leading slash this would also ignore any contributor-created
+# frontend/test/ or backend/app/test/ directory.
+/test/
+
+# Local coding-assistant state: session locks and machine settings. These are not
+# secrets, but do not belong in a public repository.
+.claude/
+
+# System artifacts
+NUL
+.vite/
+.DS_Store
+Thumbs.db
+
+# Editor backups
+*.bak
+*~
+
+# Local development launcher and its virtualenv (backend from source + Vite).
+# Development-only: the supported deployment stays Docker Compose. The other
+# dev artifacts (backend/.venv/, backend/data/, frontend/node_modules/) are
+# already covered above.
+/start.sh
+/.venv/

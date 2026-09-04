@@ -1,0 +1,54 @@
+{
+  "title": "Utenti",
+  "table": {
+    "user": "Utente",
+    "role": "Ruolo",
+    "key": "Chiave OpenRouter",
+    "mustChange": "password da cambiare"
+  },
+  "key": {
+    "active": "attiva",
+    "missing": "assente",
+    "rotate": "Rigenera la chiave (revoca + ricrea)",
+    "create": "Crea la chiave",
+    "rotateAria": "Rigenera chiave di {{user}}",
+    "createAria": "Crea chiave di {{user}}",
+    "created": "Chiave creata",
+    "rotated": "Chiave rigenerata"
+  },
+  "deleteAria": "Elimina {{user}}",
+  "form": {
+    "username": "username (min 3)",
+    "password": "password (min 8)",
+    "roleAria": "Ruolo",
+    "limit": "limite di spesa USD (vuoto = nessuno)",
+    "limitAria": "Limite di spesa della chiave in USD",
+    "resetAria": "Azzeramento del limite",
+    "add": "Aggiungi",
+    "mustChange": "Al primo accesso l'utente deve scegliere una nuova password",
+    "help": "Insieme all'utente nasce la sua chiave OpenRouter «blockingbear-username», con l'eventuale tetto di spesa indicato (azzerato con la cadenza scelta, a mezzanotte UTC). Limiti e consumi si gestiscono poi dalla pagina Costi."
+  },
+  "reset": {
+    "daily": "al giorno",
+    "weekly": "a settimana",
+    "monthly": "al mese"
+  },
+  "toast": {
+    "created": "Utente creato",
+    "createdNoKey": "Utente creato, ma senza chiave OpenRouter",
+    "createdNoKeyHint": "{{error}} — riprova con l'icona chiave.",
+    "deleted": "Utente eliminato",
+    "deletedKeyKept": "Utente eliminato, ma la chiave OpenRouter non è stata revocata",
+    "deletedKeyKeptHint": "{{error}} — controlla dalla pagina Costi."
+  },
+  "confirmDelete": {
+    "title": "Eliminare l'utente?",
+    "text": "L'account «{{user}}» non potrà più accedere; la sua chiave OpenRouter viene revocata.",
+    "content": "Viene eliminato anche tutto quello che ha creato — progetti: {{projects}}, chat: {{chats}}, con i loro file, allegati e impostazioni personali. L'operazione non è reversibile."
+  },
+  "confirmRotate": {
+    "title": "Rigenerare la chiave?",
+    "text": "La chiave attuale di «{{user}}» viene revocata subito e sostituita da una nuova: eventuali richieste in corso con la vecchia chiave falliranno. Lo storico dei consumi resta.",
+    "action": "Rigenera"
+  }
+}

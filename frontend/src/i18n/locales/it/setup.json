@@ -1,0 +1,69 @@
+{
+  "title": "Configurazione",
+  "step": "Passo {{n}} di {{total}}",
+  "back": "Indietro",
+  "next": "Avanti",
+  "skip": "Salta",
+  "welcome": {
+    "title": "Benvenuto su BlockingBear",
+    "text": "L'app è installata correttamente. Segui questi brevi passaggi di configurazione per iniziare.",
+    "start": "Iniziamo"
+  },
+  "key": {
+    "title": "Management key OpenRouter",
+    "intro": "Inserisci la tua Management key di OpenRouter. Attenzione: <u>non è una API key normale</u>, leggi di seguito come ottenerla.",
+    "howTitle": "Come ottenerla",
+    "how1": "Accedi a questo <a>link</a>, oppure apri la sezione «Management Keys» di OpenRouter.",
+    "how2": "Scegli «+ New key», dai un nome (es. blockingbear) e copia il valore.",
+    "how3": "Incollalo qui sotto: viene verificato con OpenRouter prima di essere salvato.",
+    "label": "Management key",
+    "already": "Una management key è già salvata da un tentativo precedente. Puoi tenerla o sostituirla.",
+    "keep": "Tieni quella salvata",
+    "save": "Verifica e salva",
+    "saved": "Management key verificata e salvata"
+  },
+  "admin": {
+    "title": "Password dell'admin",
+    "intro": "L'account amministratore si chiama <b>admin</b>, scegli la password.",
+    "username": "Username",
+    "password": "Password (almeno 8 caratteri)",
+    "confirm": "Conferma password",
+    "mismatch": "Le due password non coincidono.",
+    "create": "Crea l'amministratore",
+    "created": "Amministratore creato",
+    "already": "L'amministratore «admin» esiste già ed ha la sua chiave OpenRouter. Prosegui col passo successivo.",
+    "recreate": "Ricrea admin"
+  },
+  "terms": {
+    "title": "Termini da anonimizzare sempre",
+    "intro": "Facoltativo: il modello riconosce automaticamente le informazioni personali da anonimizzare ma non è perfetto. Ti consigliamo di inserire di seguito le informazioni (ad esempio il nome dell'azienda o nomi e cognomi) che si è sicuri di voler anonimizzare sempre. Potrai modificare la lista anche dopo dalla pagina Impostazioni.",
+    "done": "Configurazione completata!"
+  },
+  "categories": {
+    "title": "Categorie da anonimizzare",
+    "intro": "Scegli quali categorie di informazioni il modello deve anonimizzare per tutti gli utenti. Quelle già attive sono le più affidabili: puoi allargare la scelta anche dopo, dalla pagina Impostazioni, o restringerla per singolo progetto o chat.",
+    "allWarning": "Attenzione: attivare tutte le categorie aumenta la probabilità di falsi positivi (testo anonimizzato per errore). Almeno all'inizio è consigliabile procedere con le categorie predefinite.",
+    "default": "Default"
+  },
+  "chat": {
+    "title": "Regole della chat",
+    "intro": "Due scelte che valgono per tutti gli utenti. Si possono cambiare in qualsiasi momento dalla pagina Impostazioni.",
+    "policy": "Anonimizzazione chat",
+    "policyOptional": "Facoltativa",
+    "policyRequired": "Obbligatoria",
+    "policyHelp": "Puoi scegliere se forzare tutti gli utenti ad eseguire sempre e solo chat anonimizzate oppure no. Con l'opzione «Facoltativa», si possono eseguire anche chat normali senza l'utilizzo del motore di anonimizzazione.",
+    "zdr": "Consenti l'uso di modelli senza Zero Data Retention",
+    "zdrHelp": "Alcuni modelli utilizzano provider che dichiarano di raccogliere i dati delle chat. Con il flag disattivato, i modelli senza provider conformi non possono essere utilizzati.",
+    "finish": "Salva e inizia"
+  },
+  "model": {
+    "title": "Modello predefinito della chat",
+    "intro": "Facoltativo: con quale modello si apre di default una nuova conversazione, per tutti gli utenti (ognuno potrà poi scegliere il proprio). Si può cambiare in qualsiasi momento dalla pagina Impostazioni.",
+    "none": "Nessuno (lo sceglie ogni utente)",
+    "noCatalog": "Catalogo dei modelli non disponibile in questo momento: puoi impostare il modello più tardi da Impostazioni."
+  },
+  "access": {
+    "title": "Modelli visibili agli utenti",
+    "intro": "Facoltativo: gli utenti che non sono amministratori possono vedere tutto il catalogo oppure solo i modelli che selezioni qui. Il modello predefinito scelto al passo precedente è sempre incluso. Si può cambiare in qualsiasi momento dalla pagina Impostazioni."
+  }
+}

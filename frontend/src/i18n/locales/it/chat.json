@@ -1,0 +1,198 @@
+{
+  "title": "Chat",
+  "new": "Nuova chat",
+  "empty": "Nessuna conversazione.",
+  "search": {
+    "title": "Cerca nelle chat",
+    "placeholder": "Cerca nelle conversazioni…",
+    "noResults": "Nessuna conversazione trovata.",
+    "hits_one": "{{count}} messaggio",
+    "hits_other": "{{count}} messaggi"
+  },
+  "pickOne": "Seleziona una conversazione o creane una nuova.",
+  "backToProject": "Progetto",
+  "restoredFrom": "Valore ripristinato da {{placeholder}}",
+  "code": {
+    "copy": "Copia",
+    "copyHelp": "Copia il blocco di codice",
+    "copied": "Copiato",
+    "copyReal": "Copia con i valori reali",
+    "copyRealHelp": "Sostituzione letterale: prima di eseguire il codice verifica virgolette ed escaping dei valori reali",
+    "copyRaw": "Copia con segnaposto",
+    "copyRawHelp": "Copia la forma canonica con i segnaposto",
+    "restoredHelp": "Valore mostrato al posto di {{placeholder}}; nel codice canonico resta il segnaposto"
+  },
+  "reasoning": {
+    "label": "Ragionamento",
+    "live": "Ragionamento in corso…",
+    "show": "Mostra tutto il ragionamento",
+    "hide": "Nascondi il ragionamento"
+  },
+  "live": {
+    "running": "Esecuzione del codice…",
+    "searching": "Ricerca sul web…",
+    "reading": "Lettura della pagina…",
+    "ocr": "Lettura delle immagini (OCR)…",
+    "writing": "Sta scrivendo…",
+    "thinking": "Sta ragionando…",
+    "waiting": "In attesa del modello…"
+  },
+  "step": {
+    "code": {
+      "running": "Esecuzione codice…",
+      "failed": "Esecuzione: {{outcome}}",
+      "done": "Codice eseguito"
+    },
+    "search": {
+      "running": "Ricerca web…",
+      "failed": "Ricerca web: {{outcome}}",
+      "done_one": "Ricerca web · {{count}} risultato",
+      "done_other": "Ricerca web · {{count}} risultati",
+      "done": "Ricerca web",
+      "query": "Query"
+    },
+    "page": {
+      "running": "Lettura pagina…",
+      "failed": "Lettura pagina: {{outcome}}",
+      "done": "Pagina letta"
+    },
+    "ocr": {
+      "running": "Lettura immagini (OCR)…",
+      "failed": "Lettura immagini: {{outcome}}",
+      "done_one": "Immagini lette (OCR) · {{count}} immagine",
+      "done_other": "Immagini lette (OCR) · {{count}} immagini",
+      "done": "Immagini lette (OCR)",
+      "image": "Immagine {{index}}",
+      "page": " · pagina {{page}}"
+    }
+  },
+  "attachment": {
+    "restored": "Valori reali ripristinati",
+    "restoredWith": "Valori reali ripristinati · {{what}}",
+    "withCaveats": " · con avvertenze",
+    "stillProtected": "Artifact ancora anonimizzato (contiene TAG)",
+    "stillPlaceholders": "Contiene ancora {{count}} segnaposto",
+    "anonymized": "Anonimizzato",
+    "anonymizedCount": "Anonimizzato · {{count}} entità",
+    "failed": "Anonimizzazione fallita al tentativo precedente",
+    "pending": "Sarà anonimizzato all'invio",
+    "sentPlain": "Inviato in chiaro",
+    "willSendPlain": "Sarà inviato in chiaro",
+    "remove": "Rimuovi",
+    "removeHelp": "Rimuovi l'allegato",
+    "downloadAnon": "Anonimizzato",
+    "downloadAnonHelp": "Scarica la copia anonimizzata (quella vista dal modello)",
+    "downloadOriginal": "Originale",
+    "downloadOriginalHelp": "Scarica il file originale, non anonimizzato",
+    "download": "Download",
+    "downloadHelp": "Scarica {{file}}",
+    "downloadShort": "scarica"
+  },
+  "message": {
+    "copy": "Copia il testo del messaggio",
+    "copied": "Copiato",
+    "copyFailed": "Copia non riuscita: il browser ha negato l'accesso agli appunti.",
+    "anonymized": "Anonimizzato",
+    "canceled": "Turno interrotto",
+    "plain": "Inviato in chiaro",
+    "tokens": " · {{count}} token",
+    "timeTitle": "Tempo di risposta: {{response}} dal primo segno di attività del modello (ragionamento, testo o tool); {{total}} dall'invio della richiesta, attese del provider incluse."
+  },
+  "privacy": {
+    "relaxed": "Regole privacy allentate per questa conversazione: il provider può conservare i dati inviati e usarli per addestrare i suoi modelli.",
+    "restore": "Ripristina",
+    "blocked": "<b>{{model}}</b> non ha provider con Zero Data Retention: con le regole privacy attive la richiesta viene rifiutata. Scegli un altro modello",
+    "blockedAllowed": ", oppure usalo comunque per questa conversazione.",
+    "blockedAdmin": ": l'uso dei modelli non conformi è disattivato in Impostazioni → Chat LLM.",
+    "blockedUser": ": l'uso dei modelli non conformi non è consentito su questo server.",
+    "useAnyway": "Usa comunque"
+  },
+  "newDialog": {
+    "title": "Che tipo di conversazione?",
+    "description": "La scelta vale per tutta la chat e non può essere cambiata.",
+    "anon": {
+      "title": "Chat anonimizzata",
+      "l1": "Ogni messaggio e ogni allegato vengono anonimizzati prima di partire.",
+      "l2": "Al modello arrivano segnaposto; a te i valori veri.",
+      "l3": "Solo documenti con testo estraibile: niente immagini né scansioni."
+    },
+    "plain": {
+      "title": "Chat normale",
+      "l1": "Messaggi e allegati partono come sono, senza anonimizzazione.",
+      "l2": "Qualunque formato, immagini comprese.",
+      "l3": "Da usare solo su contenuti che possono uscire così come sono.",
+      "required": "Disattivata dall'amministratore: in questa installazione le chat devono sempre essere anonimizzate."
+    }
+  },
+  "anonProgress": {
+    "yourMessage": "Il tuo messaggio",
+    "heading": "Anonimizzazione in corso — {{current}} di {{total}}",
+    "footer": "Niente parte prima della fine: al modello arriveranno solo i segnaposto.",
+    "preparing": "Preparazione…",
+    "stage": {
+      "redact": "Riscrittura",
+      "preview": "Anteprima",
+      "analyze": "Analisi"
+    },
+    "phaseOf": "{{stage}} — fase {{index}} di {{total}}: {{phase}}",
+    "phaseAlone": "{{stage}} — {{phase}}…",
+    "stageAlone": "{{stage}}…"
+  },
+  "ocr": {
+    "title": "Immagini trovate negli allegati",
+    "found_one": "È stata trovata un'immagine negli allegati di questo invio.",
+    "found_other": "Sono state trovate {{count}} immagini negli allegati di questo invio.",
+    "question": "Vuoi usare l'OCR per analizzarle e coprire le informazioni sensibili lette al loro interno? Richiede qualche secondo in più a pagina. Senza OCR le immagini restano com'erano (e gli allegati immagine o le scansioni non possono partire).",
+    "textOnly": "No, solo testo",
+    "use": "Sì, usa l'OCR"
+  },
+  "merge": {
+    "title": "Entità da unire?",
+    "description": "L'anonimizzazione è finita e <b>non è ancora partito niente</b>. Il rilevatore ha tenuto separate queste entità, ma potrebbero essere la stessa: decidendo adesso, il modello lo sa già per questo messaggio. I file non vengono ritoccati — è il messaggio di sistema a dire che i due segnaposto indicano la stessa entità.",
+    "cancel": "Annulla l'invio",
+    "continue": "Continua e invia"
+  },
+  "banner": {
+    "errors_one": "{{count}} errore",
+    "errors_other": "{{count}} errori",
+    "errorsHint": "Alcune funzionalità non sono disponibili: clicca per i dettagli.",
+    "sandboxOff": "Sandbox non disponibile",
+    "sandboxOffHelp": "Il container Docker della sandbox non è attivo: l'analisi dei file è disattivata.",
+    "webOff": "Ricerca web non disponibile",
+    "webOffHelp": "Il container Docker del browser non è attivo: la ricerca web è disattivata.",
+    "keyMissing": "Chiave OpenRouter non configurata: chiedi all'amministratore (Impostazioni).",
+    "modelNotAllowed": "Il modello <b>{{model}}</b> non è fra quelli consentiti dall'amministratore: scegline un altro dal selettore per continuare.",
+    "costTitle": "Costo di questa conversazione: {{cost}} $ · {{prompt}} token in ingresso, {{completion}} in uscita",
+    "context": "Contesto {{used}} / {{max}} · {{pct}}%",
+    "contextTitle": "Occupazione del contesto del modello: {{used}} token su {{max}} disponibili ({{pct}}%), misurata sull'ultima risposta. Si aggiorna alla fine di ogni turno.",
+    "anonRequired": "Conversazione anonimizzata (obbligatoria per impostazione dell'amministratore)",
+    "anonOn": "Conversazione anonimizzata",
+    "review": "Vedi testo e file anonimizzati prima di inviare",
+    "reviewHint": "Prima dell'invio vedrai originale e versione anonimizzata di messaggio e allegati, con la possibilità di ritoccare l'anonimizzazione."
+  },
+  "thread": {
+    "follow": "Segui la risposta",
+    "toBottom": "Vai in fondo"
+  },
+  "composer": {
+    "pendingTitle": "In allegato al prossimo messaggio:",
+    "uploading": " · {{size}} · caricamento…",
+    "queued": " · {{size}} · in coda",
+    "attach": "Allega uno o più file",
+    "placeholder": "Scrivi un messaggio…  (Invio per inviare, Shift+Invio a capo)",
+    "stop": "Ferma",
+    "stopping": "Interruzione in corso…",
+    "send": "Invia",
+    "waitUploads": "Attendi il caricamento degli allegati",
+    "aiDisclosure": "Le risposte sono generate da un modello di intelligenza artificiale e possono contenere errori o imprecisioni."
+  },
+  "error": {
+    "pickModel": "Scegli prima un modello.",
+    "sendFailed": "Invio non riuscito.",
+    "canceled": "Invio annullato: non è partito niente."
+  },
+  "confirmDelete": {
+    "title": "Eliminare la conversazione?",
+    "text": "«{{title}}» verrà eliminata con i suoi messaggi, allegati e il registro dei dati anonimizzati. L'operazione non si può annullare."
+  }
+}

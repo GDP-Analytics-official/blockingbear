@@ -1,0 +1,26 @@
+{
+  "heading": "Processing",
+  "status": {
+    "uploading": "Uploading the file…",
+    "canceling": "Cancelling…",
+    "queuedNext": "Queued — next up",
+    "queuedAfter": "Queued — {{count}} ahead",
+    "processing": "Anonymising…",
+    "phaseOf": "Step {{index}} of {{total}} — {{phase}}",
+    "phaseAlone": "{{phase}}…",
+    "done": "Ready",
+    "canceled": "Cancelled",
+    "failed": "Error"
+  },
+  "phase": {
+    "image_ocr": "Image OCR",
+    "analysis": "Analysis",
+    "analysis_sample": "Sample analysis",
+    "analysis_columns": "Column analysis",
+    "analysis_values": "Value analysis",
+    "redaction": "Redaction",
+    "preview": "Preview"
+  },
+  "open": "Open",
+  "cancel": "Cancel processing"
+}

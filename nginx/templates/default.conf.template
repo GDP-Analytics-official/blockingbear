@@ -1,0 +1,98 @@
+# BlockingBear HTTP server: serve the compiled SPA and proxy /api to the backend.
+# The image entrypoint substitutes ${BACKEND_ORIGIN} at startup.
+#
+# SSE buffering must remain disabled and timeouts must remain long; nginx
+# defaults make streamed chat appear broken.
+
+server {
+    listen      80;
+    listen      [::]:80;
+    server_name _;
+
+    root  /usr/share/nginx/html;
+    index index.html;
+
+    # --- Security headers -----------------------------------------------------
+    # No guessed CSP: the Vite build uses inline styles. These three headers are
+    # safe for the current application.
+    #
+    # nginx does not inherit parent `add_header` directives into a location that
+    # declares any of its own. Repeat all three headers in every such location.
+    # Verify with: curl -D - -o /dev/null http://127.0.0.1/
+    add_header X-Content-Type-Options nosniff always;
+    add_header X-Frame-Options SAMEORIGIN always;
+    add_header Referrer-Policy strict-origin-when-cross-origin always;
+
+    # --- Login brute-force limit ---------------------------------------------
+    # Exact route before the general /api/ block, so only login is limited.
+    location = /api/auth/login {
+        limit_req zone=login burst=5 nodelay;
+
+        proxy_pass         ${BACKEND_ORIGIN};
+        proxy_http_version 1.1;
+        proxy_set_header   Host              $host;
+        proxy_set_header   X-Real-IP         $remote_addr;
+        proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header   X-Forwarded-Proto $scheme;
+        proxy_set_header   Connection        "";
+
+        # Repeated because this location declares its own add_header.
+        add_header X-Content-Type-Options nosniff always;
+        add_header X-Frame-Options SAMEORIGIN always;
+        add_header Referrer-Policy strict-origin-when-cross-origin always;
+    }
+
+    # --- API, including streaming --------------------------------------------
+    location /api/ {
+        proxy_pass         ${BACKEND_ORIGIN};
+        proxy_http_version 1.1;
+        proxy_set_header   Host              $host;
+        proxy_set_header   X-Real-IP         $remote_addr;
+        proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header   X-Forwarded-Proto $scheme;
+
+        # Chat turns and jobs use SSE. Default buffering would batch model text
+        # and stop anonymization progress from updating in real time.
+        proxy_buffering    off;
+        proxy_cache        off;
+        # Also tell any upstream proxy not to buffer.
+        add_header         X-Accel-Buffering no always;
+
+        # Chat can take minutes, and entity-merge confirmation can hold a request
+        # open for up to 900 seconds. The default 60-second timeout is too short.
+        proxy_read_timeout 3600s;
+        proxy_send_timeout 3600s;
+
+        # SSE uses no Upgrade. Clear Connection so HTTP/1.1 does not close it.
+        proxy_set_header   Connection "";
+
+        # Repeated because X-Accel-Buffering makes this location own add_header.
+        add_header X-Content-Type-Options nosniff always;
+        add_header X-Frame-Options SAMEORIGIN always;
+        add_header Referrer-Policy strict-origin-when-cross-origin always;
+    }
+
+    # --- Hashed assets: immutable --------------------------------------------
+    location /assets/ {
+        # Emit one Cache-Control header; `expires 1y` would add a conflicting one.
+        add_header Cache-Control "public, max-age=31536000, immutable" always;
+        access_log off;
+        add_header X-Content-Type-Options nosniff always;
+        add_header X-Frame-Options SAMEORIGIN always;
+        add_header Referrer-Policy strict-origin-when-cross-origin always;
+    }
+
+    # Never cache index.html; it points browsers at the current hashed assets.
+    location = /index.html {
+        add_header Cache-Control "no-store" always;
+        add_header X-Content-Type-Options nosniff always;
+        add_header X-Frame-Options SAMEORIGIN always;
+        add_header Referrer-Policy strict-origin-when-cross-origin always;
+    }
+
+    # --- Fallback SPA --------------------------------------------------------
+    # Client-side routes must receive index.html on refresh instead of nginx 404.
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}

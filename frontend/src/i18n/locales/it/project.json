@@ -1,0 +1,122 @@
+{
+  "file": {
+    "back": "← Progetto",
+    "confirmed": "✓ Confermato — visibile alle chat",
+    "downloadAnon": "⬇ Anonimizzato",
+    "downloadOriginal": "⬇ Originale",
+    "downloadMap": "⬇ Mappa",
+    "anonSuffix": "_anonimizzato",
+    "mapSuffix": "_mappa"
+  },
+  "backToProjects": "← Progetti",
+  "fallbackTitle": "Progetto",
+  "rename": "Rinomina",
+  "renameAria": "Rinomina progetto",
+  "modeHint": "Il modo del progetto vale per file e chat e non si cambia.",
+  "modeAnon": "Progetto anonimizzato",
+  "modePlain": "Progetto normale",
+  "categories": "Categorie",
+  "openChats": "Apri le chat",
+  "anonIntro": "Ogni file viene anonimizzato con il registro condiviso del progetto: lo stesso valore ha lo stesso segnaposto in tutti i file e in tutte le chat. Un file diventa visibile alle chat solo quando lo <b>confermi</b> dopo la revisione.",
+  "anonIntroLocked": "Ogni file viene anonimizzato con il registro condiviso del progetto: lo stesso valore ha lo stesso segnaposto in tutti i file e in tutte le chat. Un file diventa visibile alle chat solo quando lo <b>confermi</b> dopo la revisione. Le chat hanno già inviato messaggi: da qui in poi sono ammesse solo modifiche additive.",
+  "drop": {
+    "aria": "Carica uno o più file nel progetto",
+    "idle": "Trascina qui i file del progetto, o clicca per sceglierli",
+    "busy": "Carico <name>{{name}}</name>{{size}}…",
+    "busyHint": "Il trasferimento può richiedere qualche secondo: al termine il file entra in coda di elaborazione.",
+    "hintAnon": "PDF, Word, PowerPoint, Excel, LibreOffice, testo, dati o immagini (con OCR): verrà anonimizzato e messo in revisione.",
+    "hintPlain": "Qualunque formato: il file si salva così com'è.",
+    "busyMore": "Puoi già scegliere gli altri: si mettono in coda."
+  },
+  "queue": {
+    "wait": " · {{size}} · in coda",
+    "up": " · {{size}} · caricamento…"
+  },
+  "stale": {
+    "title_one": "Un file non è allineato alla mappa corrente",
+    "title_other": "{{count}} file non sono allineati alla mappa corrente",
+    "body_one": "Dopo che è stato redatto, il registro del progetto ha imparato valori che contiene ancora in chiaro: lo stesso valore risulta protetto in un file e in chiaro in un altro. Ri-redigendolo torna tutto allo stesso segnaposto.",
+    "body_other": "Dopo che sono stati redatti, il registro del progetto ha imparato valori che contengono ancora in chiaro: lo stesso valore risulta protetto in un file e in chiaro in un altro. Ri-redigendoli torna tutto allo stesso segnaposto.",
+    "bodyValues_one": "Dopo che è stato redatto, il registro del progetto ha imparato valori che contiene ancora in chiaro (<b>{{values}}</b>): lo stesso valore risulta protetto in un file e in chiaro in un altro. Ri-redigendolo torna tutto allo stesso segnaposto.",
+    "bodyValues_other": "Dopo che sono stati redatti, il registro del progetto ha imparato valori che contengono ancora in chiaro (<b>{{values}}</b>): lo stesso valore risulta protetto in un file e in chiaro in un altro. Ri-redigendoli torna tutto allo stesso segnaposto.",
+    "rebuild_one": "Ri-redigi il file",
+    "rebuild_other": "Ri-redigi tutti",
+    "badge": "Non allineato",
+    "badgeHint": "Il registro ha imparato valori che questo file contiene ancora in chiaro",
+    "badgeHintValues": "Il registro ha imparato valori che questo file contiene ancora in chiaro: {{values}}",
+    "aligned": "File allineato alla mappa corrente"
+  },
+  "unchecked": {
+    "label_one": "Un file non è stato verificato (troppo grande per controllarlo all'apertura):",
+    "label_other": "{{count}} file non sono stati verificati (troppo grandi per controllarli all'apertura):",
+    "verify": "Verifica {{file}}"
+  },
+  "table": {
+    "file": "File",
+    "status": "Stato",
+    "size": "Dim.",
+    "uploaded": "Caricato"
+  },
+  "status": {
+    "busy": "In lavorazione",
+    "confirmed": "Confermato",
+    "open": "Apri il file",
+    "view": "Visualizza",
+    "reviewHint": "Rivedi l'anonimizzazione e conferma il file",
+    "toConfirm": "Da confermare"
+  },
+  "deleteAria": "Elimina {{file}}",
+  "chats": {
+    "title": "Chat del progetto",
+    "new": "Nuova chat",
+    "emptyAnon": "Nessuna chat: creane una — avrà accesso a tutti i file confermati del progetto.",
+    "emptyPlain": "Nessuna chat: creane una — avrà accesso a tutti i file del progetto."
+  },
+  "toast": {
+    "uploaded": "File caricato",
+    "queued": "File in coda di elaborazione",
+    "confirmed": "File confermato: le chat del progetto ora lo vedono",
+    "realigned": "File riallineato al registro corrente del progetto",
+    "deleted": "File eliminato",
+    "rebuildFailed": "{{file}}: {{error}}",
+    "uploadedMany": "{{count}} file caricati",
+    "queuedMany": "{{count}} file in coda di elaborazione"
+  },
+  "confirmReview": "Conferma",
+  "ocr": {
+    "titleImage_one": "L'immagine si anonimizza con l'OCR",
+    "titleImage_other": "Le {{count}} immagini si anonimizzano con l'OCR",
+    "titleDoc_one": "Immagini trovate nel documento",
+    "titleDoc_other": "Immagini trovate in {{count}} documenti",
+    "bodyImage_one": "Il testo verrà letto con l'OCR e le informazioni sensibili coperte direttamente nei pixel. Richiede qualche secondo.",
+    "bodyImage_other": "I testi verranno letti con l'OCR e le informazioni sensibili coperte direttamente nei pixel. Richiede qualche secondo.",
+    "bodyBatch": "Questi file contengono immagini. Vuoi usare l'OCR per analizzarle e coprire le informazioni sensibili lette al loro interno? La risposta vale per tutto il gruppo.",
+    "itemImage": "immagine",
+    "itemImages_one": "un'immagine",
+    "itemImages_other": "{{count}} immagini",
+    "batchImagesNote_one": "L'immagine viene comunque letta con l'OCR: senza, non ci sarebbe niente da anonimizzare.",
+    "batchImagesNote_other": "Le {{count}} immagini vengono comunque lette con l'OCR: senza, non ci sarebbe niente da anonimizzare.",
+    "noText": "Questo PDF non ha testo selezionabile (probabile scansione): senza OCR l'anonimizzazione non può agire.",
+    "textOnly": "No, solo testo",
+    "useImage": "Usa l'OCR",
+    "useDoc": "Sì, usa l'OCR"
+  },
+  "confirmDeleteFile": {
+    "title": "Eliminare il file dal progetto?",
+    "text": "«{{file}}» non sarà più visibile alle chat del progetto. I segnaposto già usati nelle chat continueranno a decodificarsi."
+  },
+  "confirmRebuild": {
+    "title_one": "Ri-redigere il file con la mappa corrente?",
+    "title_other": "Ri-redigere {{count}} file con la mappa corrente?",
+    "body_one": "Il file viene rielaborato dall'originale con tutto quello che il registro ha imparato nel frattempo: i valori rimasti in chiaro prendono lo stesso segnaposto che hanno già negli altri file.",
+    "body_other": "I file vengono rielaborati dall'originale con tutto quello che il registro ha imparato nel frattempo: i valori rimasti in chiaro prendono lo stesso segnaposto che hanno già negli altri file.",
+    "confirmed_one": "Un file è già confermato: nei turni passati il modello può averne letto i valori in chiaro. Da adesso li vedrà protetti — quello che è già partito non si riscrive, e i segnaposto continuano a decodificarsi.",
+    "confirmed_other": "{{count}} file sono già confermati: nei turni passati il modello può averne letto i valori in chiaro. Da adesso li vedrà protetti — quello che è già partito non si riscrive, e i segnaposto continuano a decodificarsi.",
+    "queued": "La rielaborazione va in coda: la segui dalla barra dei job.",
+    "action": "Ri-redigi"
+  },
+  "catsDialog": {
+    "title": "Categorie da anonimizzare",
+    "description": "Valgono per i prossimi file caricati e per i prossimi messaggi di tutte le chat del progetto. Quello che è già partito resta com'è."
+  }
+}

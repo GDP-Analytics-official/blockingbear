@@ -1,0 +1,34 @@
+name: Deployment contract
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  linux-compose:
+    runs-on: ubuntu-latest
+    env:
+      BLOCKINGBEAR_PG_PASSWORD: ci-only-not-a-secret
+      BLOCKINGBEAR_CAMOFOX_ACCESS_KEY: ci-only-not-a-secret
+      BLOCKINGBEAR_DOCKER_SOCKET: /var/run/docker.sock
+      BLOCKINGBEAR_DOCKER_GID: "0"
+    steps:
+      - uses: actions/checkout@v7
+      - name: Validate POSIX and Python syntax
+        run: |
+          sh -n scripts/init-env.sh scripts/preflight.sh scripts/verify.sh scripts/install-nvidia-toolkit.sh
+          python3 -m py_compile backend/app/openrouter/sandbox.py backend/sandbox/kernel.py backend/tests/sandbox_manager_test.py
+      - name: Validate CPU plus sandbox Compose
+        run: docker compose --env-file backend/.env.example -f docker-compose.yaml -f docker-compose.sandbox.yaml config >/dev/null
+      - name: Validate NVIDIA plus sandbox Compose
+        run: docker compose --env-file backend/.env.example -f docker-compose.yaml -f docker-compose.nvidia.yaml -f docker-compose.sandbox.yaml config >/dev/null
+
+  macos-shell:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Validate macOS POSIX entry points
+        run: sh -n scripts/init-env.sh scripts/preflight.sh scripts/verify.sh scripts/install-nvidia-toolkit.sh

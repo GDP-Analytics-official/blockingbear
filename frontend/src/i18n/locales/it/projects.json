@@ -1,0 +1,48 @@
+{
+  "title": "Progetti",
+  "new": "Nuovo progetto",
+  "search": "Cerca progetto…",
+  "table": {
+    "project": "Progetto",
+    "files": "File",
+    "chats": "Chat",
+    "updated": "Aggiornato"
+  },
+  "deleteAria": "Elimina {{name}}",
+  "noMatch": "Nessun progetto corrisponde a «{{query}}».",
+  "deleted": "Progetto eliminato",
+  "empty": {
+    "title": "Crea un progetto per iniziare",
+    "text": "Un progetto raccoglie in un unico posto più file a cui avranno sempre accesso le chat. Puoi decidere se creare un progetto anonimizzato oppure normale."
+  },
+  "confirmDelete": {
+    "title": "Eliminare il progetto?",
+    "text": "«{{name}}», i suoi file, le sue chat e il registro dei segnaposto verranno rimossi definitivamente da questo server."
+  },
+  "dialog": {
+    "title": "Nuovo progetto",
+    "description": "Scegli la tipologia del progetto da creare. Una volta selezionato, non è più possibile modificarlo.",
+    "namePlaceholder": "Nome del progetto",
+    "defaultName": "Nuovo progetto",
+    "policyRequired": "L'amministratore ha reso obbligatoria l'anonimizzazione: il progetto nascerà anonimizzato.",
+    "create": "Crea progetto",
+    "anon": {
+      "title": "Progetto anonimizzato",
+      "l1": "Ogni file caricato viene anonimizzato, poi deve essere visto e confermato.",
+      "l2": "Le chat del progetto vedono solo i file anonimizzati e condividono gli stessi segnaposto.",
+      "l3": "Puoi caricare documenti con testo estraibile o con immagini."
+    },
+    "plain": {
+      "title": "Progetto normale",
+      "l1": "I file vengono salvati così come sono, senza anonimizzazione.",
+      "l2": "Quindi le chat del progetto vedono i file originali.",
+      "l3": "Presta molta attenzione ai contenuti che carichi."
+    }
+  },
+  "categories": {
+    "title": "Categorie da anonimizzare",
+    "all": "Tutte",
+    "none": "Nessuna",
+    "help": "Valgono per tutti i file e per tutte le chat del progetto. I termini specifici si applicano comunque: quelli dell'amministratore e i tuoi (Impostazioni)."
+  }
+}

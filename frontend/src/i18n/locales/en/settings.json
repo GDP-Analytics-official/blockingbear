@@ -1,0 +1,130 @@
+{
+  "title": "Settings",
+  "introAdmin": "These take effect from the next uploaded document, with no server restart. Installation parameters (cores, queue, upload limit) stay in <code>backend/.env</code>.",
+  "introUser": "Your preferences. The rest of the configuration belongs to your administrator.",
+  "saving": "Saving…",
+  "revert": "Discard changes",
+  "savedSettings": "Settings saved",
+  "defaultSuffix": " (default: {{value}})",
+  "section": {
+    "uploads": "Uploads and queue",
+    "xlsx": "Excel files",
+    "libreoffice": "LibreOffice conversion",
+    "chat": "LLM chat",
+    "sessions": "Sessions"
+  },
+  "registry": {
+    "max_upload_mb": {
+      "label": "Maximum size of uploadable files (MB)",
+      "help": "Applies to every format: above it, the upload is refused immediately (HTTP 413), before it even reaches the queue."
+    },
+    "max_queue": {
+      "label": "Maximum queued jobs",
+      "help": "Above it, uploads answer “queue full” and the user retries later. Queued files live in the server's RAM: raising this raises the memory the queue can take."
+    },
+    "xlsx_max_chunks": {
+      "label": "Maximum analysable size (text blocks)",
+      "help": "Sheet content is analysed by the model in blocks of ~120 words: on an office CPU each block costs about 0.75 seconds, so 800 blocks ≈ 10 minutes of processing. Beyond the limit the upload fails with a message stating the file size. 0 = no limit."
+    },
+    "xlsx_table_min_rows": {
+      "label": "Minimum rows for per-column anonymisation",
+      "help": "Cleanly tabular sheets (header + homogeneous columns) with at least this many data rows are anonymised column by column: the model analyses only a sample and PII columns are replaced wholesale, deterministically. Below the threshold (or if the sheet is not tabular) the full analysis is used. 0 = path disabled."
+    },
+    "xlsx_table_sample_rows": {
+      "label": "Sample rows per tabular sheet",
+      "help": "How many rows (first + spread out + last) go through the model to decide which columns hold PII. More rows = a more reliable decision but a slower analysis."
+    },
+    "xlsx_table_coverage_pct": {
+      "label": "Coverage to mark a column as PII (%)",
+      "help": "Minimum share of sampled values recognised as PII for the whole column to be anonymised. Values above 100 are treated as 100."
+    },
+    "xlsx_preview_rows": {
+      "label": "Rows per sheet in the preview",
+      "help": "The PDF preview is generated from a copy truncated to this many rows per sheet (the file is shown as a “partial preview”); redaction and residual checks always work on the complete file. Thousands of rows = huge PDFs and slow LibreOffice conversions."
+    },
+    "lo_timeout_s": {
+      "label": "Timeout for one conversion (seconds)",
+      "help": "Maximum time for a single conversion (incoming Office formats and preview PDFs): beyond it, processing fails with “conversion timed out”. Raise it on slow machines if large documents time out."
+    },
+    "chat_max_upload_mb": {
+      "label": "Maximum size of a chat attachment (MB)",
+      "help": "A separate (and lower) cap than the one for project files: chat attachments are processed in the sandbox and kept for the whole conversation."
+    },
+    "chat_turn_cost_limit_cents": {
+      "label": "Spending cap per single answer (US cents)",
+      "help": "An answer can cost more than it looks: the model runs code several times and each round re-sends the whole conversation. Once the cap is reached, the model is told to stop running code and answer with what it has (the answer still arrives). 0 = no cap."
+    },
+    "chat_model_attach_mb": {
+      "label": "Maximum size of a file sent to the model (MB)",
+      "help": "Images and PDFs are shown DIRECTLY to the model (where supported), so they travel in every request of the turn and are paid for as tokens: above this threshold the file stays in the sandbox only, where the model opens it with code."
+    },
+    "chat_web_search": {
+      "label": "Allow web search in chats",
+      "help": "Adds two read-only tools to the model (search and page reading) through a browser local to the server. CAREFUL with anonymised chats: search queries leave towards the engine (DuckDuckGo) with the REAL values — the protection covers the path towards the LLM provider, which keeps seeing only placeholders: content fetched from the web comes back anonymised and goes through the egress check. On values not yet known to the registry the protection of web text is best-effort. Every user can turn the search off in a single conversation."
+    },
+    "chat_ai_marking": {
+      "label": "Mark AI-generated files (AI Act, Art. 50)",
+      "help": "Writes a machine-readable English notice into the METADATA of every file the model produces (“AI-generated content”, with the standard IPTC code trainedAlgorithmicMedia): docx/xlsx/pptx in the document properties, PDFs in the Subject and Keywords fields, PNGs in an internal text block, SVGs in a comment. The visible content never changes. csv, json and txt are not marked (a comment would break parsing): for those, the origin recorded by the application applies."
+    },
+    "chat_allow_non_zdr": {
+      "label": "Allow models without Zero Data Retention",
+      "help": "On every request we require Zero Data Retention providers and no data collection; about a third of models have no compliant provider and are refused. With this on, whoever picks one of those models can grant an exception for a SINGLE conversation, with the warning always in view: the provider may keep the data sent and use it to train its models. With it off, nobody can make an exception — not even the administrator."
+    },
+    "token_ttl_hours": {
+      "label": "Login session lifetime (hours)",
+      "help": "Once expired, the user signs in again. Applies to logins made after saving: sessions already open keep their own expiry."
+    }
+  },
+  "anonDefaults": {
+    "title": "Default anonymisation",
+    "intro": "These apply to <b>every user</b> and nobody can turn them off. Categories can be narrowed per project or per chat; terms cannot — anyone can only add their own, under “My terms”.",
+    "policy": "Chat anonymisation",
+    "policyRequired": "Mandatory",
+    "policyOptional": "Optional",
+    "policyHelp": "You can choose whether to force every user to always run anonymized chats only, or not. With the “Optional” setting, normal chats without the anonymization engine are allowed too.",
+    "saved": "Default anonymisation saved"
+  },
+  "password": {
+    "title": "Change password",
+    "intro": "You need your current password, no confirmation email. Your session stays open: the new password applies from your next sign-in.",
+    "current": "Current password",
+    "new": "New password (min 8 characters)",
+    "confirm": "Confirm the new password",
+    "mismatch": "The two passwords do not match.",
+    "submit": "Change password",
+    "saved": "Password changed",
+    "show": "Show password",
+    "hide": "Hide password",
+    "forcedTitle": "Choose a new password",
+    "forcedIntro": "The administrator requires a password change on first sign-in: choose a new one to continue. Your current password is the one you were given."
+  },
+  "myTerms": {
+    "title": "My terms to anonymise",
+    "intro": "Text you always want covered in <b>your</b> projects and chats: client names, internal codes, code names. No other user sees them. They can also be added from the “Anonymise in future too” box when you select text in a preview.",
+    "globalsTitle": "Set by your administrator (they apply to you too)",
+    "globalsHelp": "No need to repeat them here: they are already covered and cannot be turned off.",
+    "saved": "Your terms have been saved"
+  },
+  "defaultModel": {
+    "title": "Default chat model",
+    "intro": "Which model a new conversation starts with. You can pin a specific model or answer three short questions: in that case the actual model is picked when each chat opens, on the current catalogue, and stays for the whole conversation. You can always change it inside the chat.",
+    "mine": "My choice",
+    "mineEmpty": "Default (the administrator's choice)",
+    "resolved": "Right now chats open with <b>{{model}}</b>.",
+    "resolvedNone": "Right now no model: you pick one for each new chat.",
+    "admin": "Administrator's choice (applies to everyone)",
+    "adminEmpty": "None (each user picks)",
+    "saved": "Default model saved"
+  },
+  "modelAccess": {
+    "title": "Models visible to users",
+    "intro": "Which models non-administrator users can see and pick: the whole catalogue, or only the ones selected here. The installation's default model is always included. Administrators always see everything.",
+    "saved": "Visible models saved"
+  },
+  "tour": {
+    "title": "Tutorial",
+    "replay": "Replay the tutorial",
+    "help": "The first-access guided tour: it starts again from the New Chat page and continues on the pages you visit.",
+    "failed": "Could not restart the tutorial."
+  }
+}

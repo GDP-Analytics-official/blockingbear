@@ -1,0 +1,4 @@
+# PostgreSQL driver used by the supported Docker Compose deployment.
+# backend/Dockerfile installs this file in the image; the host does not need
+# Python or application dependencies.
+psycopg[binary]

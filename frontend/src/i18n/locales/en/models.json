@@ -1,0 +1,94 @@
+{
+  "rule": {
+    "fixed": "A specific model",
+    "guided": "Help me choose"
+  },
+  "guided": {
+    "use": "What will the AI mainly be used for?",
+    "use_writing": "Writing, summarising, translating, answering questions",
+    "use_documents": "Analysing documents, tables and data",
+    "use_coding": "Writing or fixing code",
+    "use_mixed": "A bit of everything",
+    "budget": "How much does cost matter?",
+    "budget_best": "Not much: quality comes first",
+    "budget_balanced": "A good balance of quality and cost",
+    "budget_economy": "Spend as little as possible",
+    "images": "Will scans, photos or PDFs with images be uploaded often?",
+    "yes": "Yes",
+    "no": "No",
+    "computing": "Looking for the right model…",
+    "result": "Recommended model: <b>{{model}}</b>",
+    "why": "Picked among {{pool}} suitable models: score {{score}} (the best has {{best}}), {{price}}.",
+    "recomputed": "The choice is recomputed on the current catalogue: when new models come out the default updates by itself.",
+    "noResult": "No model matches these answers right now. Change an answer or pick a specific model.",
+    "unavailable": "Model ratings are not available right now: try again later or pick a specific model.",
+    "pickMyself": "Choose a specific model"
+  },
+  "selector": {
+    "placeholder": "Choose a model…",
+    "search": "Search the models…",
+    "onlyTools": "Only models with tools (required for file analysis)",
+    "noMatch": "No model matches.",
+    "free": "free",
+    "price": "${{input}}/${{output}} per M tokens",
+    "noZdr": "No provider with Zero Data Retention: with privacy rules on, the request is refused",
+    "hiddenNoZdr_one": "{{count}} model hidden: no provider with Zero Data Retention",
+    "hiddenNoZdr_other": "{{count}} models hidden: no provider with Zero Data Retention"
+  },
+  "access": {
+    "all": "Every model in the catalogue",
+    "selected": "Only the selected models",
+    "onlySelected": "Selected only",
+    "locked": "default",
+    "lockedHelp": "Default model of the installation: always visible to users, it follows the rule chosen under “Default chat model”.",
+    "count_one": "{{count}} model visible to users",
+    "count_other": "{{count}} models visible to users",
+    "empty": "No model selected: users will not be able to pick any model.",
+    "clear": "Deselect all"
+  },
+  "options": {
+    "open": "Model options",
+    "pickFirst": "Choose a model first",
+    "title": "Options · {{model}}",
+    "noReasoning": "This model exposes no configurable reasoning.",
+    "noParams": "This model declares no other adjustable parameters.",
+    "default": "default",
+    "defaultShort": "default",
+    "resetOne": "Back to default",
+    "fromNextMessage": "Applies from the next message.",
+    "reset": "Reset",
+    "web": {
+      "label": "Web search",
+      "help": "The model can search the web and read pages. In anonymised chats the queries leave towards the search engine with the real values; fetched content comes back anonymised.",
+      "dockerOff": "Unavailable: the browser Docker container is not running.",
+      "adminOff": "Disabled by your administrator (Settings → LLM chat)."
+    },
+    "reasoning": {
+      "label": "Reasoning",
+      "helpMandatory": "Always on for this model: it cannot be turned off.",
+      "help": "The model thinks before answering: better answers on hard problems, slower and more expensive.",
+      "effort": "Effort",
+      "effortHelp": "How long to think for. The levels are the ones the model declares.",
+      "maxTokens": "Reasoning tokens",
+      "maxTokensHelp": "How many tokens the model may spend thinking. Empty = the provider's default.",
+      "exclude": "Hide the reasoning",
+      "excludeHelp": "The model still reasons, but the reasoning text is not returned to the chat."
+    },
+    "param": {
+      "temperature": "Temperature",
+      "temperatureHelp": "Higher = more varied, more creative answers; 0 = the most predictable.",
+      "top_p": "Top-p",
+      "top_pHelp": "Narrows the choice to the most likely words. Use instead of temperature, not alongside it.",
+      "top_k": "Top-k",
+      "top_kHelp": "How many candidate words to consider at each step. 0 = no limit.",
+      "frequency_penalty": "Frequency penalty",
+      "frequency_penaltyHelp": "Positive = discourages repeating the same words.",
+      "presence_penalty": "Presence penalty",
+      "presence_penaltyHelp": "Positive = pushes towards introducing new topics.",
+      "max_tokens": "Maximum answer length",
+      "max_tokensHelp": "In tokens (~4 characters each). Empty = the model's maximum.",
+      "seed": "Seed",
+      "seedHelp": "Same seed and same parameters = repeatable answer, where the provider supports it."
+    }
+  }
+}

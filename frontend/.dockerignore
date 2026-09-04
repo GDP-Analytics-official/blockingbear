@@ -1,0 +1,15 @@
+# Frontend build context (docker build ... frontend).
+#
+# Exclude node_modules and dist: the former would be copied into the layer and
+# defeat `npm ci` plus layer caching; a dist/ compiled on another machine would
+# replace the one built here — silently, because the filenames would look right.
+node_modules/
+dist/
+.vite/
+
+npm-debug.log*
+yarn-error.log*
+
+# --- Meta ---
+Dockerfile
+.dockerignore

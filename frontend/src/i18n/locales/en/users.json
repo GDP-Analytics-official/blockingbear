@@ -1,0 +1,54 @@
+{
+  "title": "Users",
+  "table": {
+    "user": "User",
+    "role": "Role",
+    "key": "OpenRouter key",
+    "mustChange": "password change pending"
+  },
+  "key": {
+    "active": "active",
+    "missing": "none",
+    "rotate": "Regenerate the key (revoke + recreate)",
+    "create": "Create the key",
+    "rotateAria": "Regenerate {{user}}'s key",
+    "createAria": "Create {{user}}'s key",
+    "created": "Key created",
+    "rotated": "Key regenerated"
+  },
+  "deleteAria": "Delete {{user}}",
+  "form": {
+    "username": "username (min 3)",
+    "password": "password (min 8)",
+    "roleAria": "Role",
+    "limit": "spending limit USD (empty = none)",
+    "limitAria": "Key spending limit in USD",
+    "resetAria": "Limit reset period",
+    "add": "Add",
+    "mustChange": "The user must choose a new password on first sign-in",
+    "help": "Creating a user also creates their OpenRouter key “blockingbear-username”, with the spending cap you set (reset at the chosen interval, at midnight UTC). Limits and usage are managed from the Costs page."
+  },
+  "reset": {
+    "daily": "per day",
+    "weekly": "per week",
+    "monthly": "per month"
+  },
+  "toast": {
+    "created": "User created",
+    "createdNoKey": "User created, but without an OpenRouter key",
+    "createdNoKeyHint": "{{error}} — try again with the key icon.",
+    "deleted": "User deleted",
+    "deletedKeyKept": "User deleted, but the OpenRouter key was not revoked",
+    "deletedKeyKeptHint": "{{error}} — check from the Costs page."
+  },
+  "confirmDelete": {
+    "title": "Delete this user?",
+    "text": "The account “{{user}}” will no longer be able to sign in; its OpenRouter key is revoked.",
+    "content": "Everything the account created is deleted as well — projects: {{projects}}, chats: {{chats}}, along with their files, attachments and personal settings. This cannot be undone."
+  },
+  "confirmRotate": {
+    "title": "Regenerate the key?",
+    "text": "“{{user}}”'s current key is revoked immediately and replaced by a new one: any requests still running with the old key will fail. Usage history is kept.",
+    "action": "Regenerate"
+  }
+}

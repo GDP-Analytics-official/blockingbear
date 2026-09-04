@@ -1,0 +1,326 @@
+# BlockingBear in containers: database, backend, frontend, and the web-search
+# browser. This is the BASE file and brings up the complete CPU stack on Linux,
+# Windows/WSL2, and macOS (Intel and Apple silicon).
+#
+# Start from the repository root (credentials belong in backend/.env, NEVER
+# here because the repository is public):
+#
+#   docker compose --env-file backend/.env up -d --build
+#
+# For NVIDIA, ADD an override file; do not modify this one:
+#
+#   docker compose -f docker-compose.yaml -f docker-compose.nvidia.yaml \
+#     --env-file backend/.env up -d --build
+#
+# The complete file list is at the end of this header.
+#
+# BEFORE the first start, prepare two things that Compose cannot do itself:
+#
+#   1) The data directory next to this file. Run preflight and apply the exact
+#      correction it prints. Preflight performs a real container write as uid
+#      1000 on every platform. WSL2 clones use Linux filesystem permissions, so
+#      being on Windows does not by itself make a root-owned directory writable.
+#
+#   2) For the required code interpreter, build the sandbox image (the
+#      sandbox-image service below), use the host values saved by preflight,
+#      and add `-f docker-compose.sandbox.yaml`. Uncomment or edit nothing.
+#
+# Download the PII model once on the host and point to it with
+# BLOCKINGBEAR_MODEL_DIR_HOST (see backend/.env). Builds need network access to
+# PyPI, the PyTorch CPU index, Debian repositories, and npm. On its first start,
+# Camofox needs Debian repositories for noVNC. The NVIDIA build adds two hosts;
+# see docker-compose.nvidia.yaml.
+#
+# Stop (data remains in the volumes and data directory):
+#   docker compose --env-file backend/.env down
+#
+# Docker Compose 2.23.1 or newer is required: inline `configs` with `content`
+# arrived in that version, not 2.23.0. This patch-level distinction matters
+# because 2.23.0 rejects this file.
+#
+# Then open http://<machine-address> and complete the setup wizard. The ONLY
+# network-facing port is nginx HTTP port 80. The backend, PostgreSQL, and noVNC
+# console remain on loopback.
+#
+# Variables read from backend/.env:
+#   BLOCKINGBEAR_PG_PASSWORD                  required; Compose stops when it is empty
+#   BLOCKINGBEAR_CAMOFOX_ACCESS_KEY           required browser-service secret
+#   BLOCKINGBEAR_CAMOFOX_ADMIN_KEY            optional browser /stop secret
+#   BLOCKINGBEAR_VNC_PASSWORD                 optional noVNC console password
+#   BLOCKINGBEAR_DOCKER_SOCKET / _GID         path and container-visible GID verified by preflight
+#   BLOCKINGBEAR_DATA_DIR_HOST                default ./data, relative to this file
+#   BLOCKINGBEAR_DATA_DIR                     default /srv/blockingbear/data in app
+#   BLOCKINGBEAR_MODEL_DIR_HOST               default ./backend/models/rizzo-pii-0.3B-v1.5.0
+#   BLOCKINGBEAR_TORCH_INDEX                  optional verified NVIDIA torch index override
+#   BLOCKINGBEAR_PG_USER / _DB / _PORT        default blockingbear / blockingbear / 5432
+#
+# The OpenRouter Management API Key is entered in the setup wizard after the first
+# start (and replaced from the API keys admin page). It is deliberately not a Compose
+# environment variable: it lives in data/openrouter_management.key.
+#
+# The project has THREE Compose files. The other two contain only their delta,
+# not a copy of the stack:
+#   docker-compose.yaml          this file: complete CPU stack
+#   docker-compose.nvidia.yaml   NVIDIA GPU (CUDA index + container device)
+#   docker-compose.sandbox.yaml  code interpreter (Docker socket: host control)
+# The overrides combine: NVIDIA and sandbox work together. AMD GPUs (ROCm) are
+# not supported; those hosts use this CPU base file. Do not duplicate the full
+# stack for variants because duplicated facts eventually diverge silently.
+#
+# macOS needs no fourth file. On Apple silicon, linux/arm64 is supported end to
+# end: every image here has an arm64 manifest (including Camofox), the PyTorch
+# CPU index publishes its cp311 manylinux_2_28_aarch64 wheel, onnxruntime 1.20.1
+# does likewise, and remaining dependencies are arm64 or pure Python. This file
+# therefore builds and runs natively without `platform:` or emulation. Metal
+# has no container passthrough, so the supported macOS deployment uses CPU.
+
+
+# Fixed project name: otherwise Compose derives it from the directory name and
+# uses that value to prefix volumes and the network.
+name: blockingbear
+
+
+configs:
+  # Camofox configuration mounted as a file. It follows the upstream
+  # camofox.config.json, with VNC deliberately enabled so operators can inspect
+  # what the model browses and what leaves the machine.
+  #
+  # `version` identifies the configuration schema, not the image version:
+  # upstream retains 1.6.0 in this file while publishing image 1.14.0.
+  camofox_config:
+    content: |
+      {
+        "id": "camofox-browser",
+        "name": "Camofox Browser",
+        "version": "1.6.0",
+        "newPageTimeoutMs": 10000,
+        "interactive": { "mode": "off" },
+        "plugins": {
+          "youtube": { "enabled": true },
+          "persistence": { "enabled": true },
+          "vnc": { "enabled": true, "resolution": "1920x1080" }
+        }
+      }
+
+
+services:
+
+  # --- Database ---------------------------------------------------------------
+  # The supported Compose deployment always uses PostgreSQL so concurrent
+  # anonymization turns can run in parallel and data remains in a named volume.
+  # Do not comment out this service or the backend DATABASE_URL to create an
+  # unsupported variant.
+  postgres:
+    image: postgres:17-alpine
+    container_name: blockingbear-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${BLOCKINGBEAR_PG_USER:-blockingbear}
+      # This validation message is read directly by operators, so keep it in English.
+      POSTGRES_PASSWORD: ${BLOCKINGBEAR_PG_PASSWORD:?set BLOCKINGBEAR_PG_PASSWORD in backend/.env and start with --env-file backend/.env (see docs/DEPLOYMENT.md)}
+      POSTGRES_DB: ${BLOCKINGBEAR_PG_DB:-blockingbear}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      # This remains on LOOPBACK even when the web application is network-facing.
+      # It exists only for maintenance tools such as pg_dump; the backend reaches
+      # PostgreSQL by service name on the Compose network.
+      - "127.0.0.1:${BLOCKINGBEAR_PG_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${BLOCKINGBEAR_PG_USER:-blockingbear} -d ${BLOCKINGBEAR_PG_DB:-blockingbear}"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+
+  # --- Backend: API, PII engine, and document queue ---------------------------
+  backend:
+    build:
+      context: ./backend
+      args:
+        # CPU is the correct default for the 0.3B encoder. For NVIDIA, add
+        # docker-compose.nvidia.yaml; it overrides this index and attaches the
+        # GPU in the same operation. The two settings must travel together: a
+        # CUDA index without a device produces a large image that runs on CPU,
+        # while a device without that index gives the container a GPU that its
+        # PyTorch build cannot use.
+        TORCH_INDEX: ${BLOCKINGBEAR_TORCH_INDEX:-https://download.pytorch.org/whl/cpu}
+    image: blockingbear-backend:0.1.0
+    container_name: blockingbear-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      # `postgres` is the service name on the Compose network; loopback inside a
+      # container would point back to that container. Build the URL from the same
+      # variables as the service above so the password cannot diverge. `:?`
+      # produces one precise missing-variable error instead of a misleading blank
+      # default followed by a PostgreSQL failure.
+      DATABASE_URL: postgresql+psycopg://${BLOCKINGBEAR_PG_USER:-blockingbear}:${BLOCKINGBEAR_PG_PASSWORD:?set BLOCKINGBEAR_PG_PASSWORD in backend/.env and start with --env-file backend/.env (see docs/DEPLOYMENT.md)}@postgres:5432/${BLOCKINGBEAR_PG_DB:-blockingbear}
+
+      # With BLOCKINGBEAR_CAMOFOX_URL set, the backend does not manage the browser
+      # container lifecycle; Compose does. This is why search works here while
+      # an isolated `docker run` needs extra networking: 127.0.0.1 is container
+      # loopback, whereas `camofox` resolves on the Compose network.
+      BLOCKINGBEAR_CAMOFOX_URL: http://camofox:9377
+      # Must match CAMOFOX_ACCESS_KEY on the Camofox service; browser.py sends it
+      # as an `Authorization: Bearer` credential.
+      BLOCKINGBEAR_CAMOFOX_API_KEY: ${BLOCKINGBEAR_CAMOFOX_ACCESS_KEY:-}
+
+      # Application-side data directory. The bind mount below uses the same
+      # variable for its container side, preventing path divergence.
+      BLOCKINGBEAR_DATA_DIR: ${BLOCKINGBEAR_DATA_DIR:-/srv/blockingbear/data}
+
+      # PII_MODEL_DIR, BLOCKINGBEAR_N_WORKERS, and BLOCKINGBEAR_CORS_ORIGINS are image
+      # environment values; see backend/Dockerfile. Deliberately do not attach
+      # backend/.env as an env_file because its source-development settings must
+      # not override the supported container defaults.
+    volumes:
+      # RELATIVE sources are resolved from this file's directory, so these mounts
+      # behave identically on Linux, macOS, and Windows. Installation never needs
+      # to rewrite host-specific paths into this file.
+      #
+      # Both sides of the data mount come from the same variable pair: the host
+      # path on the left and the application path on the right.
+      - ${BLOCKINGBEAR_DATA_DIR_HOST:-./data}:${BLOCKINGBEAR_DATA_DIR:-/srv/blockingbear/data}
+      # Read-only PII model: keep this 1.2 GB checkpoint outside the image. The
+      # default is the v1.5.0 directory documented in docs/DEPLOYMENT.md; the
+      # directory name pins the checkpoint revision. WARNING: if the source does
+      # not exist, Docker creates and mounts an EMPTY directory. Containers may
+      # still become healthy because model warm-up runs in a background thread
+      # while the healthcheck only probes the API. `model_loaded` in
+      # GET /api/health is authoritative. This streamed sandbox architecture has
+      # no host/container path-parity requirement, so relative paths are portable.
+      - ${BLOCKINGBEAR_MODEL_DIR_HOST:-./backend/models/rizzo-pii-0.3B-v1.5.0}:/app/models/rizzo-pii-0.3B-v1.5.0:ro
+      #
+      # CODE INTERPRETER — uncomment nothing. Add docker-compose.sandbox.yaml.
+      # Each kernel uses private tmpfs; inputs and artifacts are streamed, so no
+      # host/container path parity is needed. The override mounts the Engine
+      # socket: root-equivalent control on Linux, bounded by the Docker Desktop VM
+      # and its shared paths on desktop platforms. The repository owner has
+      # permanently authorized this required deployment feature. Build its image:
+      #   docker compose --profile build build sandbox-image
+      # --- GPU NVIDIA -----------------------------------------------------------
+    # NVIDIA lives entirely in docker-compose.nvidia.yaml; add that file rather
+    # than uncommenting anything. Device reservations do not degrade to CPU: on
+    # a host without working passthrough, `docker compose up` fails. Linux uses
+    # NVIDIA Container Toolkit; Windows uses Docker Desktop/WSL2.
+    ports:
+      # Loopback only: network clients enter through nginx and its login rate
+      # limit. Publishing this port broadly would bypass the proxy and expose the
+      # unauthenticated health endpoint's internal paths and state. Keep it only
+      # for local diagnostics (curl 127.0.0.1:8000/api/health).
+      - "127.0.0.1:8000:8000"
+
+  # --- Frontend: build and publish the SPA, then exit -------------------------
+  # ONE-SHOT service, not a server. Its Dockerfile builds the SPA, copies it to
+  # the `spa` volume, and exits 0. nginx waits for that successful exit. Every
+  # `up --build` republishes the current frontend.
+  frontend:
+    build:
+      context: ./frontend
+    image: blockingbear-frontend:0.1.0
+    container_name: blockingbear-frontend-build
+    # One-shot: restarting it in a loop would copy the SPA forever.
+    restart: "no"
+    volumes:
+      - spa:/spa
+
+  # --- NGINX: single entry point, serves SPA and proxies /api -----------------
+  # All web-server configuration lives in nginx/. The SPA is not baked into the
+  # image; it arrives through the volume populated by the frontend service.
+  nginx:
+    build:
+      context: ./nginx
+    image: blockingbear-nginx:0.1.0
+    container_name: blockingbear-nginx
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+      # Wait for the SPA volume; otherwise nginx would return 404 at the root.
+      frontend:
+        condition: service_completed_successfully
+    environment:
+      # Image default repeated here as the single line to change if the backend
+      # service is renamed.
+      BACKEND_ORIGIN: http://backend:8000
+    volumes:
+      # SPA compiled by the frontend service, mounted read-only.
+      - spa:/usr/share/nginx/html:ro
+    ports:
+      # The installation's only published network entry point.
+      - "0.0.0.0:80:80"
+
+  # --- Camofox: headless browser for web search -------------------------------
+  camofox:
+    image: ghcr.io/jo-inc/camofox-browser:1.14.0
+    container_name: blockingbear-camofox
+    restart: unless-stopped
+    shm_size: 2gb
+    configs:
+      - source: camofox_config
+        target: /app/camofox.config.json
+    environment:
+      # CAMOFOX_ACCESS_KEY is the credential that protects this service. When
+      # set, all routes except /health, cookie import, and /stop require the
+      # Bearer header sent by browser.py. CAMOFOX_API_KEY alone protects only
+      # cookie import. CAMOFOX_AUTH_MODE belongs to another image fork and has no
+      # effect in this one.
+      CAMOFOX_ACCESS_KEY: ${BLOCKINGBEAR_CAMOFOX_ACCESS_KEY:?set BLOCKINGBEAR_CAMOFOX_ACCESS_KEY in backend/.env and start with --env-file backend/.env (see docs/DEPLOYMENT.md)}
+      # Separate POST /stop credential: page access must not imply shutdown access.
+      CAMOFOX_ADMIN_KEY: ${BLOCKINGBEAR_CAMOFOX_ADMIN_KEY:-}
+      CAMOFOX_PORT: '9377'
+      CAMOFOX_CRASH_REPORT_ENABLED: 'false'
+      # The server's 128 MB default heap is too small for real pages.
+      MAX_OLD_SPACE_SIZE: '2048'
+      # VNC allows operators to inspect the session. Resolution belongs in the
+      # plugin configuration above; VNC_BIND and VNC_RESOLUTION are unsupported
+      # no-ops in this image.
+      ENABLE_VNC: '1'
+      VNC_PASSWORD: ${BLOCKINGBEAR_VNC_PASSWORD:-}
+    # noVNC is not bundled in this image, so install it on first start; `dpkg -s`
+    # skips installation on later starts. If a future image bundles it, remove
+    # this entire command override and use the image entrypoint. Verify with:
+    #   docker run --rm --entrypoint sh ghcr.io/jo-inc/camofox-browser:1.14.0 -c 'dpkg -s novnc'
+    # The first start requires container egress.
+    #
+    # `$$` is intentional: a single `$` would be expanded by Compose. The double
+    # form passes a literal dollar sign to the container shell so it reads the
+    # service environment.
+    command:
+      - sh
+      - '-c'
+      - >-
+        (dpkg -s novnc >/dev/null 2>&1 || (apt-get update && apt-get install -y
+        --no-install-recommends novnc python3-websockify x11vnc net-tools
+        procps)) && exec node --max-old-space-size="$${MAX_OLD_SPACE_SIZE:-2048}"
+        server.js
+    ports:
+      # Never publish 9377: the backend reaches it by service name, while a
+      # network-accessible stealth browser would be an open proxy. Publish only
+      # the noVNC console, and only on loopback.
+      - "127.0.0.1:6080:6080"
+
+  # --- Code-interpreter sandbox image ----------------------------------------
+  # This is a container template, not a running service. Keeping it here gives
+  # the image tag one source of truth. The profile excludes it from `up`:
+  #
+  #   docker compose --profile build build sandbox-image
+  #
+  # The backend then uses blockingbear-sandbox:1 to create conversation
+  # containers. Its entrypoint is a JSON-lines kernel on stdin/stdout, not a
+  # server, so the backend launches it directly with --network=none.
+  sandbox-image:
+    profiles: ["build"]
+    build:
+      context: ./backend/sandbox
+    # Must match the BLOCKINGBEAR_SANDBOX_IMAGE default in app/config.py.
+    image: blockingbear-sandbox:1
+
+
+volumes:
+  pgdata:
+  # Compiled SPA: written by frontend and read by nginx. It contains no user data,
+  # is regenerated on every build, and does not belong in backups.
+  spa:

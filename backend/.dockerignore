@@ -1,0 +1,42 @@
+# Backend build context (docker build ... backend).
+#
+# Without this file, every build sends about 1.5 GB to the daemon — models/ is
+# 1.2 GB and data/ is 314 MB — and, much worse, SECRETS: backend/.env may contain
+# an OpenRouter Management Key and the Postgres password, data/secret.key is the
+# JWT signing secret, and data/openrouter.key is the shared inference key. The
+# Dockerfile would not currently copy them, but a file excluded from the context
+# cannot accidentally enter a layer later when somebody adds another COPY.
+
+# --- Secrets and local configuration: never include in the context ---
+# Covers .env, .env.production, and backup names such as .env.production.bak.
+.env*
+
+# --- Runtime data: databases, keys, and user documents ---
+data/
+
+# --- PII model: 1.2 GB, mounted at runtime (see Dockerfile) ---
+# IMPORTANT: this is `models/`, NOT `**/models/`. In .dockerignore, a pattern
+# without ** applies only at the context root, which is exactly what we need:
+# app/engine/models/signature_yolo11n.onnx (10.6 MB, the OCR signature/stamp
+# detector) is versioned inside app/ and MUST enter the image. With `**/models/`
+# it disappeared and OCR silently lost signature detection.
+models/
+
+# --- Local virtual environment and bytecode ---
+.venv/
+**/__pycache__/
+**/*.py[cod]
+
+# --- Not needed in the backend image ---
+# Suites run manually from the repository with their fixtures and fake
+# OpenRouter server: 6 MB that the container does not need.
+tests/
+# Separate image: docker build -t blockingbear-sandbox:1 backend/sandbox
+# (it has a different context, so this exclusion does not affect it).
+sandbox/
+# Used only to regenerate test documents, not to run the application.
+requirements-dev.txt
+
+# --- Meta ---
+Dockerfile
+.dockerignore

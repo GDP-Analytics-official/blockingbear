@@ -1,0 +1,99 @@
+{
+  "shared": {
+    "noSpend": "No spending recorded in this period.",
+    "showTable": "Show the table",
+    "showChart": "Show the chart",
+    "exportCsv": "Export CSV",
+    "exportXlsx": "Export XLSX",
+    "exportCsvAria": "Export {{title}} as CSV",
+    "exportXlsxAria": "Export {{title}} as XLSX",
+    "sheetName": "Data",
+    "billions": "bn",
+    "millions": "m"
+  },
+  "analytics": {
+    "title": "Analytics",
+    "subtitle": "OpenRouter data, queried just now",
+    "refresh": "Refresh",
+    "period": "{{count}} days",
+    "tile": {
+      "balance": "Remaining balance",
+      "spend": "Spend · {{count}} days",
+      "spendHint": "BlockingBear keys",
+      "requests": "Requests",
+      "tokens": "Tokens",
+      "lastDays": "over the last {{count}} days"
+    },
+    "byDay": {
+      "title": "Spend per day, by user",
+      "aria": "Spend per day, stacked by user",
+      "export": "spend-day-user-{{days}}d",
+      "day": "Day"
+    },
+    "byModel": {
+      "title": "Spend by model",
+      "subtitle": "top {{count}} in the chart, all of them in the table",
+      "export": "spend-model-user-{{days}}d",
+      "model": "Model",
+      "requests": "Requests",
+      "requestsShort": "{{n}} req."
+    },
+    "byUser": {
+      "title": "Spend by user",
+      "subtitle": "each column split by model",
+      "aria": "Spend by user, stacked by model",
+      "export": "spend-user-model-{{days}}d",
+      "user": "User"
+    },
+    "otherModels": "Other models",
+    "total": "Total"
+  },
+  "keys": {
+    "title": "API keys",
+    "subtitle": "one OpenRouter key per user; usage and limits queried just now",
+    "refresh": "Refresh",
+    "sectionTitle": "Keys and limits",
+    "sectionHint": "limits reset at midnight UTC",
+    "table": {
+      "user": "User / key",
+      "today": "Today",
+      "week": "Week",
+      "month": "Month",
+      "total": "Total",
+      "limit": "Limit"
+    },
+    "noLimit": "none",
+    "noReset": "no reset",
+    "remaining": " · {{value}} left",
+    "editLimit": "Edit limit",
+    "editLimitAria": "Edit {{user}}'s limit",
+    "withoutKey": "Without a key: {{users}} (create it from the Users page).",
+    "reset": {
+      "daily": "daily",
+      "weekly": "weekly",
+      "monthly": "monthly"
+    },
+    "dialog": {
+      "title": "Spending limit",
+      "description": "Cap in USD for “{{user}}”: once reached, OpenRouter refuses their requests until it resets.",
+      "limit": "Limit (USD, empty = none)",
+      "limitPlaceholder": "e.g. 20",
+      "reset": "Reset",
+      "resetNever": "never (one-off cap)",
+      "resetDaily": "every day",
+      "resetWeekly": "every week",
+      "resetMonthly": "every month",
+      "saved": "Limit updated"
+    },
+    "management": {
+      "title": "OpenRouter management key",
+      "help": "It does not run inference: it creates every user's “blockingbear-<i>username</i>” key and reads usage and balance. Create it at openrouter.ai → Settings → Management Keys. Replacing it leaves the users' existing keys untouched.",
+      "current": "In use",
+      "missing": "Not set",
+      "balance": "account balance: ${{value}}",
+      "replace": "Replace the management key",
+      "insert": "Enter the management key",
+      "saved": "Management key verified and saved"
+    }
+  }
+}

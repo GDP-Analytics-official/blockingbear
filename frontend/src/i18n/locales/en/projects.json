@@ -1,0 +1,48 @@
+{
+  "title": "Projects",
+  "new": "New project",
+  "search": "Search projects…",
+  "table": {
+    "project": "Project",
+    "files": "Files",
+    "chats": "Chats",
+    "updated": "Updated"
+  },
+  "deleteAria": "Delete {{name}}",
+  "noMatch": "No project matches “{{query}}”.",
+  "deleted": "Project deleted",
+  "empty": {
+    "title": "Create a project to get started",
+    "text": "A project gathers several files in one place, always available to its chats. You can choose whether to create an anonymised project or a normal one."
+  },
+  "confirmDelete": {
+    "title": "Delete this project?",
+    "text": "“{{name}}”, its files, its chats and its placeholder registry will be permanently removed from this server."
+  },
+  "dialog": {
+    "title": "New project",
+    "description": "Choose the type of project to create. Once selected, it can no longer be changed.",
+    "namePlaceholder": "Project name",
+    "defaultName": "New project",
+    "policyRequired": "Your administrator has made anonymisation mandatory: this project will be created anonymised.",
+    "create": "Create project",
+    "anon": {
+      "title": "Anonymised project",
+      "l1": "Every uploaded file is anonymised, then has to be reviewed and confirmed.",
+      "l2": "Chats in the project only see the anonymised files, and share the same placeholders.",
+      "l3": "You can upload documents with extractable text or with images."
+    },
+    "plain": {
+      "title": "Standard project",
+      "l1": "Files are saved exactly as they are, with no anonymisation.",
+      "l2": "So the chats in the project see the original files.",
+      "l3": "Pay close attention to the content you upload."
+    }
+  },
+  "categories": {
+    "title": "Categories to anonymise",
+    "all": "All",
+    "none": "None",
+    "help": "These apply to every file and every chat in the project. Specific terms still apply: your administrator's and your own (Settings)."
+  }
+}

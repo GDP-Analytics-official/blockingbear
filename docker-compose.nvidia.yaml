@@ -1,0 +1,69 @@
+# NVIDIA GPU support for BlockingBear: only the DELTA from docker-compose.yaml.
+# Add it to the base file; do not replace the base file:
+#
+#   docker compose -f docker-compose.yaml -f docker-compose.nvidia.yaml \
+#     --env-file backend/.env up -d --build
+#
+# `--build` is mandatory on first use and when switching in either direction.
+# The PyTorch index is a build argument, while CPU and NVIDIA variants share the
+# same blockingbear-backend:0.1.0 tag. A CPU image remains CPU even with a GPU
+# attached; switching back without a build leaves the large CUDA image running
+# on CPU. Both failures are silent. When in doubt, run
+# `docker compose ... build --no-cache backend`.
+#
+# Native Linux requires NVIDIA Container Toolkit. Do NOT install it inside a
+# Windows WSL2 distro: Docker Desktop uses the Windows NVIDIA driver and GPU-PV.
+# Preflight runs a real `docker run --gpus all ... nvidia-smi` before selecting
+# this override. Missing passthrough must fail instead of silently using CPU.
+#
+# Verification after startup (must print True). Repeat `--env-file` on EVERY
+# subcommand because Compose interpolates the complete file every time.
+#   docker compose -f docker-compose.yaml -f docker-compose.nvidia.yaml \
+#     --env-file backend/.env \
+#     exec backend python -c "import torch; print(torch.cuda.is_available())"
+#
+# No code change is required: app/engine/core.py selects the CUDA device from
+# torch.cuda.is_available().
+#
+# VRAM: the 0.3B fp32 encoder uses about 1.2-1.5 GB per document worker.
+#
+# There is no macOS GPU override because Metal has no container passthrough.
+# macOS uses the CPU base file.
+#
+# AMD GPUs are not supported. ROCm needs /dev/kfd, /dev/dri, and group plumbing,
+# not this device reservation, and has not been validated on real hardware. AMD
+# hosts use the CPU base file.
+
+services:
+  backend:
+    build:
+      args:
+        # Override the base CPU index. Keep it variable so operators can select a
+        # different compatible CUDA index without editing this file.
+        #
+        # CANONICAL LIST: other files reference this list instead of duplicating
+        # it. Indices verified on 2026-08-25 to publish the cp311 wheel for
+        # torch 2.13: cu126, cu129, cu130, cu132. Do not use cu128 (latest is
+        # 2.11.0), cu118 (2.7.1), cu121, or cu124. The pinned install in the
+        # backend Dockerfile makes an incompatible index fail immediately.
+        # cu126 is the conservative default for host-driver compatibility;
+        # newer indices may have smaller wheels but require newer drivers.
+        #
+        # NETWORK: cu126 links NVIDIA and Triton packages from pypi.nvidia.com
+        # and download-r2.pytorch.org. An outbound proxy or allowlist must permit
+        # those hosts as well as download.pytorch.org.
+        TORCH_INDEX: ${BLOCKINGBEAR_TORCH_INDEX:-https://download.pytorch.org/whl/cu126}
+        # ModernBERT enables torch.compile on CUDA. The first forward reaches
+        # Triton, which compiles a native launcher at runtime. Without a C
+        # compiler the pipeline object loads but inference fails. This flag adds
+        # the toolchain only to the NVIDIA image.
+        INSTALL_TRITON_BUILD_TOOLS: "1"
+    # Attach all GPUs. `deploy.resources` preserves the project's Compose 2.23.1
+    # minimum; the newer `gpus: all` syntax would require Compose 2.30.
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]

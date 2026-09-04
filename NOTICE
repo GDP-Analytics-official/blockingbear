@@ -1,0 +1,202 @@
+BlockingBear
+Copyright (C) 2026 GDP Analytics S.r.l.
+
+This program is free software: you can redistribute it and/or modify it under
+the terms of the GNU Affero General Public License as published by the Free
+Software Foundation, either version 3 of the License, or (at your option) any
+later version.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+PARTICULAR PURPOSE. See the GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License along
+with this program. If not, see <https://www.gnu.org/licenses/>.
+
+The full text of the licence is in the LICENSE file at the root of this
+repository.
+
+
+-------------------------------------------------------------------------------
+WHY AGPL-3.0 AND NOT SOMETHING MORE PERMISSIVE
+-------------------------------------------------------------------------------
+
+Two components BlockingBear depends on are themselves licensed under the
+AGPL-3.0, and both are linked into the application rather than merely invoked as
+external programs. A combined work that includes them can only be distributed
+under the AGPL-3.0. This is not a preference; it is a condition inherited from
+upstream:
+
+  * PyMuPDF / MuPDF (Artifex Software) — imported throughout the document
+    engine (app/engine/, see app/engine/mupdf_lock.py for the serialisation
+    wrapper). Upstream states: "Dual Licensed - GNU AFFERO GPL 3.0 or Artifex
+    Commercial License".
+
+  * YOLO11n (Ultralytics) — app/engine/models/signature_yolo11n.onnx, the
+    signature and stamp detector used by app/engine/image_ocr.py. Ultralytics
+    licenses YOLO11 under AGPL-3.0 and takes the position that the licence
+    extends to exported and derived weights.
+
+Anyone wishing to redistribute BlockingBear under terms other than the
+AGPL-3.0 must therefore first obtain commercial licences for these two
+components from Artifex and Ultralytics respectively, or replace them.
+
+
+-------------------------------------------------------------------------------
+THIRD-PARTY COMPONENTS
+-------------------------------------------------------------------------------
+
+Copyleft (linked into the application, and the reason for the licence above):
+
+  PyMuPDF / MuPDF                Artifex Software        AGPL-3.0 or commercial
+  YOLO11n (exported weights)     Ultralytics             AGPL-3.0 or commercial
+
+Permissive, linked into the backend:
+
+  PyTorch                        Apache-2.0
+  Transformers                   Apache-2.0
+  huggingface_hub                Apache-2.0
+  RapidOCR (PP-OCRv5 mobile)     Apache-2.0
+  onnxruntime                    MIT
+  FastAPI                        MIT
+  uvicorn                        BSD-3-Clause
+  python-multipart               Apache-2.0
+  phonenumbers                   Apache-2.0
+  PyJWT                          MIT
+  httpx                          BSD-3-Clause
+  Pillow                         MIT-CMU
+  SQLAlchemy                     MIT
+  Alembic                        MIT
+  psycopg (optional)             LGPL-3.0
+  Playwright                     Apache-2.0
+
+Permissive, bundled into the frontend build:
+
+  React, React DOM               MIT
+  React Router                   MIT
+  Radix UI primitives            MIT
+  Tailwind CSS                   MIT
+  i18next, react-i18next         MIT
+  lucide-react                   ISC
+  sonner, clsx, tailwind-merge,
+  class-variance-authority       MIT
+  Inter (Fontsource)             SIL Open Font License 1.1
+  SheetJS (xlsx)                 Apache-2.0
+  Vite                           MIT
+
+Source code incorporated into this work, not merely linked against:
+
+  rizzo-pii                      MIT       (c) 2026 Simone Rizzo,
+                                           Rizzo AI Academy
+
+  Substantial portions of backend/app/engine/detectors.py and
+  backend/app/engine/pdf_export.py, and a smaller part of
+  backend/app/engine/core.py, are derived — with modifications — from the
+  rizzo-pii sources src/app/detectors.py, src/app/pdf_export.py and
+  src/app/app.py. The MIT licence requires its notice to travel with those
+  portions, so its full text is reproduced at the end of this file.
+
+  shadcn/ui                      MIT       (c) 2023 shadcn
+
+  The components in frontend/src/components/ui/ (alert-dialog, badge, button,
+  checkbox, dialog, input, label, table) and the `cn` helper in
+  frontend/src/lib/utils.js are derived — with modifications — from shadcn/ui
+  (https://github.com/shadcn-ui/ui). shadcn/ui is distributed as source to be
+  copied into a project rather than as a package to depend on, so those files
+  are incorporated here and not merely linked against; the Radix UI primitives
+  and class-variance-authority they build on are listed above as ordinary
+  dependencies. Its MIT notice is reproduced at the end of this file too.
+
+Models:
+
+  rizzo-pii-0.3B (PII detection) — MIT, (c) 2026 Simone Rizzo, Rizzo AI
+  Academy. The checkpoint is downloaded from HuggingFace at install time and is
+  not distributed in this repository.
+
+  mmBERT-base (jhu-clsp/mmBERT-base) — MIT, Center for Language and Speech
+  Processing, Johns Hopkins University. The multilingual encoder that
+  rizzo-pii-0.3B is a fine-tune of. Not distributed here either: it reaches the
+  machine only inside the fine-tuned weights above.
+
+Separate processes, invoked over a command line or a local socket. These are
+not linked into BlockingBear and their licences do not propagate to it:
+
+  LibreOffice                    MPL-2.0     document conversion and previews
+  Camoufox                       MPL-2.0     browser used by the web tools
+  Docker image for the code
+  interpreter sandbox            see backend/sandbox/requirements.txt
+  PostgreSQL (optional)          PostgreSQL License
+
+Development-only, not shipped and not imported by the application (they build
+the synthetic test documents in backend/tests/assets/):
+
+  python-docx, openpyxl,
+  python-pptx                    MIT
+
+-------------------------------------------------------------------------------
+FULL TEXT OF THIRD-PARTY LICENCES INCORPORATED INTO THIS WORK
+-------------------------------------------------------------------------------
+
+Two MIT-licensed projects have source incorporated into this work, and the MIT
+licence requires each notice to travel with it. Nothing below narrows the
+AGPL-3.0 that governs BlockingBear as a whole; these are the upstream notices
+we are required to carry.
+
+1. rizzo-pii
+-------------------------------------------------------------------------------
+
+Portions of backend/app/engine/ — detectors.py, pdf_export.py and part of
+core.py — are derived from rizzo-pii
+(https://github.com/Rizzo-AI-Academy/rizzo-pii) and are used under the terms
+below.
+
+  MIT License
+
+  Copyright (c) 2026 Simone Rizzo — Rizzo AI Academy
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
+
+  The above copyright notice and this permission notice shall be included in all
+  copies or substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
+
+2. shadcn/ui
+-------------------------------------------------------------------------------
+
+The components in frontend/src/components/ui/ and the `cn` helper in
+frontend/src/lib/utils.js are derived from shadcn/ui
+(https://github.com/shadcn-ui/ui) and are used under the terms below.
+
+  MIT License
+
+  Copyright (c) 2023 shadcn
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
+
+  The above copyright notice and this permission notice shall be included in all
+  copies or substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.

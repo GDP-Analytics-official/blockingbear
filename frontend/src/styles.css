@@ -1,0 +1,283 @@
+/* ============================================================
+   CSS del VIEWER (DocumentViewer): variabili e primitive scritte
+   a mano, scopate su `.main`. Il resto dell'app usa Tailwind +
+   componenti (src/index.css): non aggiungere qui regole per le
+   altre pagine.
+   ============================================================ */
+
+:root {
+  --bg: #f4f5f8;
+  --card: #ffffff;
+  --ink: #1e2430;
+  --muted: #6a7280;
+  --line: #e3e6ee;
+  --brand: #1f6f5c;
+  --brand-dk: #175546;
+  --warn-bg: #fff6e0;
+  --warn-line: #e8c76c;
+  --err: #b3362c;
+  --yellow: rgba(255, 230, 60, 0.45);
+  --yellow-line: rgba(200, 165, 0, 0.85);
+}
+
+/* compat col preflight di Tailwind: il viewer ereditava questi default
+   dal browser (grassetti dei titoli, bullet, margini dei paragrafi) */
+.pane h3, .confirm-modal h3, .maptable th { font-weight: 700; }
+.confirm-list { list-style: disc; }
+.panel p.muted { margin: 1em 0; }
+
+code { background: #eef1f6; padding: 1px 5px; border-radius: 5px; font-size: 13px; }
+.muted { color: var(--muted); font-size: 13.5px; }
+.error { color: var(--err); font-size: 13.5px; margin-top: 8px; }
+.warning {
+  background: var(--warn-bg); border: 1px solid var(--warn-line);
+  border-radius: 8px; padding: 8px 12px; margin-bottom: 10px; font-size: 13.5px;
+}
+
+/* primitive dei bottoni/campi usate dal viewer (tabs, popover, pannelli).
+   NB: scopate a .main (la pagina del viewer): essendo fuori dai layer CSS,
+   se fossero globali vincerebbero sulle utility Tailwind dei nuovi componenti. */
+.main button { font: inherit; cursor: pointer; border: 0; border-radius: 8px; padding: 8px 14px; }
+.main button:disabled { opacity: 0.55; cursor: default; }
+.main .primary { background: var(--brand); color: #fff; font-weight: 600; }
+.main .primary:hover:not(:disabled) { background: var(--brand-dk); }
+.main .danger { background: var(--err); color: #fff; font-weight: 600; }
+.main .danger:hover:not(:disabled) { background: #932c24; }
+.main .ghost, .ghost.backlink { background: #fff; border: 1px solid var(--line); color: var(--ink); }
+.main .ghost:hover { border-color: #c7cdd9; }
+.main .ghost.small { padding: 3px 8px; font-size: 12px; }
+.main input, .main select, .main textarea {
+  font: inherit; color: var(--ink); border: 1px solid var(--line);
+  border-radius: 8px; padding: 8px 10px; background: #fcfcfe; width: 100%;
+}
+.main input:focus, .main textarea:focus { outline: none; border-color: var(--brand); }
+
+.spinner {
+  display: inline-block; width: 14px; height: 14px; border-radius: 50%;
+  border: 2px solid rgba(31, 111, 92, 0.25); border-top-color: var(--brand);
+  animation: spin 0.7s linear infinite; vertical-align: -2px; margin-right: 6px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.main { flex: 1; min-width: 0; padding: 16px; display: flex; flex-direction: column; }
+
+/* testata delle pagine interne (link di ritorno alla lista) */
+.page-head { margin-bottom: 10px; flex: none; }
+.backlink {
+  display: inline-block; padding: 5px 12px; border-radius: 8px; font-size: 13px;
+  text-decoration: none; background: var(--card); border: 1px solid var(--line);
+  color: var(--ink);
+}
+.backlink:hover { border-color: #c7cdd9; }
+
+/* viewer */
+.viewer { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+.viewer-head { display: flex; align-items: center; gap: 14px; margin-bottom: 10px; flex-wrap: wrap; }
+.viewer-actions { display: flex; gap: 8px; align-items: center; margin-left: auto; flex-wrap: wrap; }
+.tabs { display: inline-flex; background: #e9ecf3; border-radius: 9px; padding: 3px; }
+.tabs button { background: transparent; color: var(--muted); padding: 5px 12px; font-size: 13.5px; border-radius: 7px; }
+.tabs button.on { background: #fff; color: var(--ink); box-shadow: 0 1px 3px rgba(20, 28, 46, 0.12); }
+
+.compare { flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 14px; min-height: 0; position: relative; }
+
+/* «non c'è niente da anonimizzare»: cartellino al centro del confronto, a
+   cavallo delle due anteprime. Inerte ai click: sotto si può continuare a
+   trascinare sul testo per anonimizzare a mano. */
+.nothing-anon {
+  position: absolute; inset: 0; z-index: 40;
+  display: grid; place-items: center; pointer-events: none;
+}
+.nothing-anon-card {
+  display: flex; align-items: center; gap: 14px;
+  padding: 11px 12px 11px 20px; border-radius: 12px;
+  background: rgba(255, 255, 255, 0.97); border: 1px solid var(--line);
+  box-shadow: 0 10px 34px rgba(20, 28, 46, 0.22);
+}
+.nothing-anon-card b { font-size: 14.5px; color: var(--brand); }
+/* la «x» è l'unica parte cliccabile del cartellino */
+.nothing-anon-card button {
+  pointer-events: auto; flex: none; width: 24px; height: 24px; padding: 0;
+  border-radius: 7px; background: transparent; border: 1px solid transparent;
+  color: var(--muted); font-size: 17px; line-height: 1; cursor: pointer;
+}
+.nothing-anon-card button:hover { background: #eef1f6; color: var(--ink); }
+.pane { display: flex; flex-direction: column; min-height: 0; }
+.pane h3 {
+  font-size: 12.5px; text-transform: uppercase; letter-spacing: 0.04em;
+  color: var(--muted); margin-bottom: 6px;
+}
+.pages {
+  flex: 1; overflow-y: auto; border: 1px solid var(--line); border-radius: 10px;
+  background: #eceef3; padding: 12px; display: flex; flex-direction: column; gap: 12px;
+}
+/* flex: none è essenziale: senza, i figli di una colonna flex scrollabile
+   vengono COMPRESSI per stare nell'altezza invece di sforare nello scroll.
+   overflow visibile: i popover dei box devono poter sporgere dalla pagina. */
+.page {
+  flex: none; position: relative; border-radius: 6px;
+  box-shadow: 0 1px 2px rgba(20, 28, 46, 0.10), 0 6px 18px rgba(20, 28, 46, 0.10);
+}
+.page img { display: block; width: 100%; height: auto; border-radius: 6px; user-select: none; }
+/* spazio vuoto in coda a ogni colonna, alto quanto la colonna: serve allo
+   scroll sincronizzato (DocumentViewer.anchorScroll) per far seguire il lato
+   con meno pagine fino all'ultima riga dell'altro */
+.pages-tail { flex: none; height: 100%; }
+.page-loading { width: 100%; aspect-ratio: 0.707; background: #fff; }
+.page-missing {
+  flex: none; background: #fff; border: 1px dashed var(--line); border-radius: 8px;
+  padding: 30px 16px; text-align: center; color: var(--muted); font-size: 13.5px;
+}
+.page-num {
+  position: absolute; right: 6px; bottom: 6px; background: rgba(30, 36, 48, 0.65);
+  color: #fff; font-size: 11px; border-radius: 6px; padding: 1px 7px;
+}
+.box { position: absolute; border-radius: 4px; }
+.box:hover { z-index: 30; }
+/* gemello del box sotto il mouse sull'altro lato: bordo forte e alone,
+   sopra i box vicini ma sotto i popover */
+.box.box-twin {
+  outline: 2px solid #d9480f; outline-offset: 2px;
+  box-shadow: 0 0 0 5px rgba(217, 72, 15, 0.22); z-index: 29;
+}
+/* entità rilevata (lato originale): evidenziatore morbido, senza bordo */
+.box-yellow { background: rgba(255, 210, 70, 0.4); }
+.box-yellow:hover { background: rgba(255, 200, 50, 0.55); }
+/* segnaposto (lato anonimizzato): chip pieno smeraldo al posto del tratteggio */
+.box-outline {
+  background: rgba(31, 111, 92, 0.1);
+  outline: 1px solid rgba(31, 111, 92, 0.28); cursor: help;
+}
+.box-outline:hover { background: rgba(31, 111, 92, 0.18); }
+
+/* popover di de-anonimizzazione: figlio del box, così il :hover del box resta
+   attivo anche quando il puntatore scende nel popover (niente gap in mezzo) */
+.boxpop {
+  display: none; position: absolute; top: 100%; left: 0; z-index: 40;
+  cursor: default; background: var(--card); border: 1px solid var(--line);
+  border-radius: 8px; padding: 8px 10px; min-width: 240px; max-width: 340px;
+  box-shadow: 0 8px 22px rgba(20, 28, 46, 0.2); font-size: 12.5px; line-height: 1.45;
+  text-align: left; white-space: normal;
+}
+.box:hover .boxpop { display: block; }
+.boxpop-map { word-break: break-word; }
+/* nota "Identificato dall'OCR": il valore viene dai pixel di un'immagine,
+   non dal layer testuale — piccola e discreta sotto la coppia ph = valore */
+.boxpop-ocr { margin-top: 3px; font-size: 11px; color: var(--muted-2, #8a90a4); }
+.pop-actions { display: flex; gap: 6px; margin-top: 7px; flex-wrap: wrap; }
+button.small { padding: 3px 8px; font-size: 12px; }
+
+/* selezione manuale (trascinamento) + popover "anonimizza questo testo" */
+.selbox {
+  position: absolute; z-index: 20; pointer-events: none; border-radius: 2px;
+  background: rgba(31, 111, 92, 0.14); outline: 1.5px dashed var(--brand);
+}
+.selpop {
+  position: absolute; z-index: 40; margin-top: 4px; cursor: default;
+  background: var(--card); border: 1px solid var(--line); border-radius: 8px;
+  padding: 8px 10px; min-width: 230px; max-width: 380px;
+  box-shadow: 0 8px 22px rgba(20, 28, 46, 0.2); font-size: 12.5px; line-height: 1.45;
+}
+.selpop-caption { color: var(--muted); font-size: 11.5px; margin-bottom: 4px; }
+/* nota "letto con l'OCR" della selezione su un'area immagine */
+.selpop-ocr {
+  font-size: 11px; color: var(--muted-2, #8a90a4); margin-bottom: 4px;
+}
+.main .selpop textarea.selpop-edit {
+  padding: 5px 7px; font-size: 12.5px; line-height: 1.45; font-style: italic;
+  border-radius: 6px; resize: vertical; min-height: 40px; max-height: 160px;
+}
+.selpop .error, .boxpop .error { margin-top: 0; }
+.selpop-save {
+  display: flex; align-items: center; gap: 6px; margin-top: 7px;
+  font-size: 11.5px; color: var(--muted); cursor: pointer; user-select: none;
+}
+/* .main input impone width:100% e padding da campo di testo: qui è una
+   checkbox e deve restare della sua dimensione naturale */
+.main .selpop-save input {
+  width: 14px; height: 14px; padding: 0; margin: 0; flex: none;
+  accent-color: var(--brand);
+}
+/* tag del termine fisso (visibile solo a checkbox attiva); il server
+   normalizza (maiuscolo, solo A-Z0-9_): l'uppercase qui è solo anteprima */
+.selpop-tag {
+  display: flex; align-items: center; gap: 6px; margin-top: 6px;
+  font-size: 11.5px; color: var(--muted);
+}
+.main .selpop-tag input {
+  flex: 1; width: auto; padding: 3px 7px; font-size: 12px;
+  text-transform: uppercase;
+}
+/* il numero progressivo lo alloca il server ([TAG_n]): va detto qui, o il
+   tag che compare nell'anteprima non è quello che l'utente ha scritto */
+.selpop-hint {
+  margin-top: 4px; font-size: 11px; line-height: 1.4;
+  color: var(--muted-2, #8a90a4);
+}
+
+/* aree SIGILLATE (solo PDF/immagini): il nero pieno sta già nei pixel della
+   pagina renderizzata, l'overlay serve solo a rendere il box interattivo */
+.box-sealed { outline: 1.5px dashed rgba(255, 255, 255, 0.65); cursor: help; }
+.box-sealed:hover { outline-color: #fff; }
+/* selezione in modalità sigillo: anteprima fedele del rettangolo nero */
+.selbox-seal { background: rgba(10, 10, 12, 0.82); outline: 1.5px solid #000; }
+.seal-note { font-size: 12px; color: var(--muted); margin-bottom: 2px; }
+.pane h3 .sealtoggle {
+  float: right; padding: 1px 8px; font-size: 11.5px; font-weight: 600;
+  text-transform: none; letter-spacing: 0; border: 1px solid var(--line);
+  border-radius: 6px; background: var(--card); color: var(--ink, inherit);
+  cursor: pointer;
+}
+.pane h3 .sealtoggle:hover { border-color: var(--brand); }
+.pane h3 .sealtoggle.on { background: #16181d; border-color: #16181d; color: #fff; }
+
+/* intestazioni di colonna cliccabili (preview xlsx): strisce trasparenti
+   sopra le lettere A/B/C stampate nella pagina + popover delle azioni */
+.colstrip {
+  position: absolute; z-index: 25; cursor: pointer; border-radius: 2px;
+}
+.colstrip:hover, .colstrip.on {
+  background: rgba(31, 111, 92, 0.18); outline: 1.5px solid var(--brand);
+}
+.colpop { z-index: 45; }
+.colpop-title { margin-bottom: 4px; word-break: break-word; }
+
+/* corpo del ReviewModal: il canvas neutro è il corpo stesso, così le pagine
+   bianche tornano a leggersi come fogli appoggiati (testata e footer del
+   modal restano bianchi: tre fasce). Il riquadro grigio interno delle .pages
+   qui sparisce, o sarebbe grigio su grigio. */
+.review-body { background: #eef0f5; }
+.review-body .pages { background: transparent; border: none; padding: 4px 2px 12px; }
+
+/* durante una ri-redazione la preview resta visibile ma inerte */
+.applying { opacity: 0.55; pointer-events: none; }
+.pane-hint { text-transform: none; letter-spacing: 0; font-weight: 400; }
+.map-actions { text-align: right; white-space: nowrap; }
+
+/* panels */
+.panel { flex: 1; overflow-y: auto; background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 16px; }
+.maptable { width: 100%; border-collapse: collapse; margin-top: 10px; }
+.maptable th, .maptable td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--line); font-size: 14px; }
+.maptable th { color: var(--muted); font-size: 12.5px; text-transform: uppercase; }
+.row { display: flex; align-items: center; gap: 12px; margin-top: 10px; }
+
+/* modal di conferma del viewer (deanonimizzazioni, azioni di colonna) */
+.modal-back {
+  position: fixed; inset: 0; background: rgba(20, 25, 38, 0.4);
+  display: grid; place-items: center; z-index: 50;
+}
+.modal {
+  background: var(--card); border-radius: 14px; padding: 20px 24px;
+  width: min(560px, 92vw); max-height: 84vh; overflow-y: auto;
+}
+.confirm-modal { width: min(460px, 92vw); animation: pop-in 0.14s ease-out; }
+.confirm-modal h3 { font-size: 16px; }
+.confirm-body { margin-top: 10px; font-size: 14px; }
+.confirm-body p { margin: 0 0 8px; }
+.confirm-list { margin: 0; padding-left: 18px; max-height: 160px; overflow-y: auto; }
+.confirm-list li { word-break: break-word; }
+.confirm-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
+@keyframes pop-in { from { transform: scale(0.96); opacity: 0; } to { transform: none; opacity: 1; } }
+
+@media (max-width: 900px) {
+  .compare { grid-template-columns: 1fr; }
+}

@@ -1,0 +1,94 @@
+{
+  "rule": {
+    "fixed": "Un modello preciso",
+    "guided": "Aiutami a scegliere"
+  },
+  "guided": {
+    "use": "Per cosa verrà utilizzata principalmente l'IA?",
+    "use_writing": "Scrivere, riassumere, tradurre, rispondere a domande",
+    "use_documents": "Analizzare documenti, tabelle e dati",
+    "use_coding": "Scrivere o correggere codice",
+    "use_mixed": "Un po' di tutto",
+    "budget": "Quanto conta il costo?",
+    "budget_best": "Poco: conta solo la qualità",
+    "budget_balanced": "Un buon equilibrio tra qualità e costo",
+    "budget_economy": "Spendere il meno possibile",
+    "images": "Verranno caricate spesso scansioni, foto o PDF con immagini?",
+    "yes": "Sì",
+    "no": "No",
+    "computing": "Ricerca del modello adatto in corso…",
+    "result": "Modello consigliato: <b>{{model}}</b>",
+    "why": "Scelto tra {{pool}} modelli adatti: punteggio {{score}} (il migliore ha {{best}}), {{price}}.",
+    "recomputed": "La scelta si ricalcola sul catalogo del momento: quando escono modelli nuovi il predefinito si aggiorna da solo.",
+    "noResult": "Nessun modello soddisfa queste risposte in questo momento. Si può cambiare una risposta o scegliere un modello preciso.",
+    "unavailable": "Le valutazioni dei modelli non sono disponibili in questo momento: riprovare più tardi o scegliere un modello preciso.",
+    "pickMyself": "Scegliere un modello preciso"
+  },
+  "selector": {
+    "placeholder": "Scegli un modello…",
+    "search": "Cerca fra i modelli…",
+    "onlyTools": "Solo modelli con strumenti (necessari per l'analisi file)",
+    "noMatch": "Nessun modello corrisponde.",
+    "free": "gratis",
+    "price": "${{input}}/${{output}} per M token",
+    "noZdr": "Nessun provider con Zero Data Retention: con le regole privacy attive la richiesta viene rifiutata",
+    "hiddenNoZdr_one": "{{count}} modello nascosto: nessun provider con Zero Data Retention",
+    "hiddenNoZdr_other": "{{count}} modelli nascosti: nessun provider con Zero Data Retention"
+  },
+  "access": {
+    "all": "Tutti i modelli del catalogo",
+    "selected": "Solo i modelli selezionati",
+    "onlySelected": "Solo i selezionati",
+    "locked": "predefinito",
+    "lockedHelp": "Modello predefinito dell'installazione: è sempre visibile agli utenti e segue la regola scelta in «Modello predefinito della chat».",
+    "count_one": "{{count}} modello visibile agli utenti",
+    "count_other": "{{count}} modelli visibili agli utenti",
+    "empty": "Nessun modello selezionato: gli utenti non potranno scegliere alcun modello.",
+    "clear": "Deseleziona tutti"
+  },
+  "options": {
+    "open": "Opzioni del modello",
+    "pickFirst": "Scegli prima un modello",
+    "title": "Opzioni · {{model}}",
+    "noReasoning": "Questo modello non espone un ragionamento configurabile.",
+    "noParams": "Il modello non dichiara altri parametri regolabili.",
+    "default": "predefinito",
+    "defaultShort": "predef.",
+    "resetOne": "Torna al predefinito",
+    "fromNextMessage": "Valgono dal prossimo messaggio.",
+    "reset": "Azzera",
+    "web": {
+      "label": "Ricerca web",
+      "help": "Il modello può cercare sul web e leggere pagine. Nelle chat anonimizzate le query partono verso il motore di ricerca con i valori reali; i contenuti rientrano anonimizzati.",
+      "dockerOff": "Non disponibile: il container Docker del browser non è attivo.",
+      "adminOff": "Disattivata dall'amministratore (Impostazioni → Chat LLM)."
+    },
+    "reasoning": {
+      "label": "Ragionamento",
+      "helpMandatory": "Sempre attivo per questo modello: non si può disattivare.",
+      "help": "Il modello ragiona prima di rispondere: risposte migliori sui problemi complessi, più lente e più costose.",
+      "effort": "Impegno",
+      "effortHelp": "Quanto a lungo ragionare. I livelli sono quelli dichiarati dal modello.",
+      "maxTokens": "Token di ragionamento",
+      "maxTokensHelp": "Quanti token il modello può spendere per ragionare. Vuoto = default del provider.",
+      "exclude": "Nascondi il ragionamento",
+      "excludeHelp": "Il modello ragiona comunque, ma il testo del ragionamento non torna in chat."
+    },
+    "param": {
+      "temperature": "Temperatura",
+      "temperatureHelp": "Più alta = risposte più varie e creative; 0 = la più prevedibile.",
+      "top_p": "Top-p",
+      "top_pHelp": "Restringe la scelta alle parole più probabili. Da usare in alternativa alla temperatura.",
+      "top_k": "Top-k",
+      "top_kHelp": "Quante parole candidate considerare a ogni passo. 0 = nessun limite.",
+      "frequency_penalty": "Penalità di frequenza",
+      "frequency_penaltyHelp": "Positiva = scoraggia la ripetizione delle stesse parole.",
+      "presence_penalty": "Penalità di presenza",
+      "presence_penaltyHelp": "Positiva = spinge a introdurre argomenti nuovi.",
+      "max_tokens": "Lunghezza massima della risposta",
+      "max_tokensHelp": "In token (~4 caratteri l'uno). Vuoto = il massimo del modello.",
+      "seed": "Seed",
+      "seedHelp": "Stesso seed e stessi parametri = risposta ripetibile, dove il provider lo supporta."
+    }
+  }
+}

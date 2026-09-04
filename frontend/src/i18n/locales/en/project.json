@@ -1,0 +1,122 @@
+{
+  "file": {
+    "back": "← Project",
+    "confirmed": "✓ Confirmed — visible to chats",
+    "downloadAnon": "⬇ Anonymised",
+    "downloadOriginal": "⬇ Original",
+    "downloadMap": "⬇ Map",
+    "anonSuffix": "_anonymised",
+    "mapSuffix": "_map"
+  },
+  "backToProjects": "← Projects",
+  "fallbackTitle": "Project",
+  "rename": "Rename",
+  "renameAria": "Rename project",
+  "modeHint": "The project's mode applies to files and chats and cannot be changed.",
+  "modeAnon": "Anonymised project",
+  "modePlain": "Standard project",
+  "categories": "Categories",
+  "openChats": "Open the chats",
+  "anonIntro": "Every file is anonymised against the project's shared registry: the same value gets the same placeholder in every file and every chat. A file becomes visible to chats only once you <b>confirm</b> it after review.",
+  "anonIntroLocked": "Every file is anonymised against the project's shared registry: the same value gets the same placeholder in every file and every chat. A file becomes visible to chats only once you <b>confirm</b> it after review. The chats have already sent messages: from here on, only additive changes are allowed.",
+  "drop": {
+    "aria": "Upload one or more files to the project",
+    "idle": "Drag project files here, or click to choose them",
+    "busy": "Uploading <name>{{name}}</name>{{size}}…",
+    "busyHint": "The transfer can take a few seconds: once done, the file joins the processing queue.",
+    "hintAnon": "PDF, Word, PowerPoint, Excel, LibreOffice, text, data or images (with OCR): it will be anonymised and put up for review.",
+    "hintPlain": "Any format: the file is stored exactly as it is.",
+    "busyMore": "You can already pick the others: they join the queue."
+  },
+  "queue": {
+    "wait": " · {{size}} · queued",
+    "up": " · {{size}} · uploading…"
+  },
+  "stale": {
+    "title_one": "One file is out of step with the current map",
+    "title_other": "{{count}} files are out of step with the current map",
+    "body_one": "Since it was redacted, the project registry has learned values it still holds in the clear: the same value ends up protected in one file and exposed in another. Re-redacting it brings everything back to the same placeholder.",
+    "body_other": "Since they were redacted, the project registry has learned values they still hold in the clear: the same value ends up protected in one file and exposed in another. Re-redacting them brings everything back to the same placeholder.",
+    "bodyValues_one": "Since it was redacted, the project registry has learned values it still holds in the clear (<b>{{values}}</b>): the same value ends up protected in one file and exposed in another. Re-redacting it brings everything back to the same placeholder.",
+    "bodyValues_other": "Since they were redacted, the project registry has learned values they still hold in the clear (<b>{{values}}</b>): the same value ends up protected in one file and exposed in another. Re-redacting them brings everything back to the same placeholder.",
+    "rebuild_one": "Re-redact the file",
+    "rebuild_other": "Re-redact all of them",
+    "badge": "Out of step",
+    "badgeHint": "The registry has learned values this file still holds in the clear",
+    "badgeHintValues": "The registry has learned values this file still holds in the clear: {{values}}",
+    "aligned": "File is in step with the current map"
+  },
+  "unchecked": {
+    "label_one": "One file was not checked (too large to check when the project opens):",
+    "label_other": "{{count}} files were not checked (too large to check when the project opens):",
+    "verify": "Check {{file}}"
+  },
+  "table": {
+    "file": "File",
+    "status": "Status",
+    "size": "Size",
+    "uploaded": "Uploaded"
+  },
+  "status": {
+    "busy": "Processing",
+    "confirmed": "Confirmed",
+    "open": "Open the file",
+    "view": "View",
+    "reviewHint": "Review the anonymisation and confirm the file",
+    "toConfirm": "To confirm"
+  },
+  "deleteAria": "Delete {{file}}",
+  "chats": {
+    "title": "Project chats",
+    "new": "New chat",
+    "emptyAnon": "No chats yet: create one — it will have access to every confirmed file in the project.",
+    "emptyPlain": "No chats yet: create one — it will have access to every file in the project."
+  },
+  "toast": {
+    "uploaded": "File uploaded",
+    "queued": "File queued for processing",
+    "confirmed": "File confirmed: the project's chats can now see it",
+    "realigned": "File realigned to the project's current registry",
+    "deleted": "File deleted",
+    "rebuildFailed": "{{file}}: {{error}}",
+    "uploadedMany": "{{count}} files uploaded",
+    "queuedMany": "{{count}} files queued for processing"
+  },
+  "confirmReview": "Confirm",
+  "ocr": {
+    "titleImage_one": "This image is anonymised with OCR",
+    "titleImage_other": "These {{count}} images are anonymised with OCR",
+    "titleDoc_one": "Images found in the document",
+    "titleDoc_other": "Images found in {{count}} documents",
+    "bodyImage_one": "The text will be read with OCR and sensitive information covered directly in the pixels. This takes a few seconds.",
+    "bodyImage_other": "The text will be read with OCR and sensitive information covered directly in the pixels. This takes a few seconds.",
+    "bodyBatch": "These files contain images. Do you want to use OCR to analyse them and cover the sensitive information found inside? The answer applies to the whole group.",
+    "itemImage": "image",
+    "itemImages_one": "one image",
+    "itemImages_other": "{{count}} images",
+    "batchImagesNote_one": "The image is read with OCR anyway: without it there would be nothing to anonymise.",
+    "batchImagesNote_other": "The {{count}} images are read with OCR anyway: without it there would be nothing to anonymise.",
+    "noText": "This PDF has no selectable text (likely a scan): without OCR, anonymisation has nothing to work on.",
+    "textOnly": "No, text only",
+    "useImage": "Use OCR",
+    "useDoc": "Yes, use OCR"
+  },
+  "confirmDeleteFile": {
+    "title": "Delete this file from the project?",
+    "text": "“{{file}}” will no longer be visible to the project's chats. Placeholders already used in chats will keep resolving."
+  },
+  "confirmRebuild": {
+    "title_one": "Re-redact the file against the current map?",
+    "title_other": "Re-redact {{count}} files against the current map?",
+    "body_one": "The file is reprocessed from the original with everything the registry has learned in the meantime: values left in the clear take the same placeholder they already have in the other files.",
+    "body_other": "The files are reprocessed from the originals with everything the registry has learned in the meantime: values left in the clear take the same placeholder they already have in the other files.",
+    "confirmed_one": "One file is already confirmed: in past turns the model may have read its values in the clear. From now on it will see them protected — what has already been sent is not rewritten, and placeholders keep resolving.",
+    "confirmed_other": "{{count}} files are already confirmed: in past turns the model may have read their values in the clear. From now on it will see them protected — what has already been sent is not rewritten, and placeholders keep resolving.",
+    "queued": "The reprocessing is queued: follow it from the jobs bar.",
+    "action": "Re-redact"
+  },
+  "catsDialog": {
+    "title": "Categories to anonymise",
+    "description": "These apply to the next files uploaded and to the next messages in every chat of the project. Whatever has already been sent stays as it is."
+  }
+}

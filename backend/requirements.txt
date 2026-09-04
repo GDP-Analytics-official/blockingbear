@@ -1,0 +1,42 @@
+# torch runs on CPU: the model is a 0.3B encoder and does not require a GPU.
+# On Windows, native wheels require an up-to-date Visual C++ runtime
+# (VC++ 14.51 or newer); otherwise the import crashes.
+torch>=2.13
+transformers>=4.56,<5
+# The lower bound is meaningful: the documented checkpoint download command
+# (`hf download` in docs/DEPLOYMENT.md) uses the CLI renamed in 0.34. Earlier
+# releases called it huggingface-cli, so the documented command would not exist.
+# transformers already caps this below 1.0, so a fresh environment resolves to a
+# recent 0.3x release.
+huggingface_hub>=0.34
+
+# server API
+fastapi
+uvicorn
+python-multipart
+pyjwt
+
+# LLM chat through OpenRouter (SSE streaming; see app/openrouter/)
+httpx
+
+# PDF
+pymupdf
+
+# Phone numbers (engine/phones.py): national numbering plans of the supported
+# languages' countries (IT/FR/DE/ES/NL/GB and neighbours). Pure Python, offline.
+phonenumbers
+
+# Optional OCR for images inside documents (engine/image_ocr.py):
+# RapidOCR PP-OCRv5 mobile on onnxruntime, about 6 seconds per page on CPU. The
+# version is PINNED because names, URLs, and bundled wheel models change between
+# releases; the Dockerfile downloads the exact two v5 models selected by code.
+# onnxruntime is PINNED: starting with 1.28, its DLLs fail to initialize on Windows.
+rapidocr==3.9.2
+onnxruntime==1.20.1
+pillow
+
+# Persistence: SQLite by default through SQLAlchemy; optional Postgres through
+# DATABASE_URL (driver in requirements-postgres.txt). Alembic migrations under
+# backend/alembic/ manage the schema and run at startup.
+sqlalchemy
+alembic

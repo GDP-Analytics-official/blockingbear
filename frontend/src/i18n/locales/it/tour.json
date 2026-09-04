@@ -1,0 +1,65 @@
+{
+  "btn": {
+    "next": "Avanti",
+    "prev": "Indietro",
+    "done": "Ho capito"
+  },
+  "new": {
+    "welcome": {
+      "title": "Benvenuto su BlockingBear",
+      "body": "Segui questo breve tutorial per capire il funzionamento dell'applicazione."
+    },
+    "nav": {
+      "title": "Chat e Progetti",
+      "body": "<b>Nuova Chat</b> per una conversazione singola. <b>Progetti</b> per lavorare su un insieme di documenti: li carichi una volta sola, li anonimizzi e ci chatti sopra."
+    },
+    "mode": {
+      "title": "Chat anonimizzata o in chiaro",
+      "body": "Nella chat <b>anonimizzata</b> i dati personali vengono sostituiti prima di lasciare il server, e le risposte tornano con i nomi veri. Quella <b>in chiaro</b> invia il testo così com'è. Si sceglie una volta sola, all'inizio.",
+      "bodyRequired": "Nella chat <b>anonimizzata</b> i dati personali vengono sostituiti prima di lasciare il server, e le risposte tornano con i nomi veri. Su questo server l'amministratore l'ha resa obbligatoria: la chat in chiaro non è disponibile."
+    },
+    "menu": {
+      "title": "Il tuo profilo",
+      "body": "Da qui apri le <b>Impostazioni</b> (password, termini da anonimizzare sempre, modello preferito) e fai il <b>Logout</b>. Accanto, la bandierina cambia la lingua dell'interfaccia."
+    }
+  },
+  "chat": {
+    "model": {
+      "title": "Il modello",
+      "body": "Qui scegli con quale modello gestire la conversazione. Se lo cambi da questa tendina avrà effetto solo per questa chat, altrimenti puoi selezionarne uno diverso di default dalla pagina delle Impostazioni."
+    },
+    "options": {
+      "title": "Le opzioni del modello",
+      "body": "Qui trovi le opzioni della conversazione, come la ricerca web e alcune impostazioni tecniche del modello. Se non sai cosa sono, i valori predefiniti vanno bene."
+    },
+    "anonTags": {
+      "title": "Le categorie da anonimizzare",
+      "body": "Qui decidi quali tipi di dati personali (nomi, indirizzi, telefoni, …) vengono anonimizzati in questa chat prima di lasciare il server."
+    },
+    "review": {
+      "title": "Controlla prima di inviare",
+      "body": "Con questa spunta, prima di ogni invio vedi l'originale e la versione anonimizzata del messaggio e degli allegati, e puoi ritoccare l'anonimizzazione. Senza, il messaggio parte subito."
+    },
+    "composer": {
+      "title": "Scrivi e allega",
+      "body": "Scrivi il messaggio e manda con <b>Invio</b> (Maiusc+Invio per andare a capo). Clicca l'icona della graffetta per allegare documenti: in una chat \"anonimizzata\" vengono anonimizzati prima di essere inviati."
+    }
+  },
+  "project": {
+    "drop": {
+      "title": "Carica i documenti",
+      "bodyAnon": "Trascina qui i documenti del progetto, o clicca per sceglierli. Ogni file viene anonimizzato e resta in attesa: <b>devi confermarlo prima che entri nelle chat</b>, dopo aver controllato il risultato.",
+      "bodyPlain": "Trascina qui i documenti del progetto, o clicca per sceglierli. Appena caricati sono disponibili nelle chat del progetto."
+    },
+    "newChat": {
+      "title": "Chatta sui documenti",
+      "body": "Da qui apri una chat del progetto: il modello legge i documenti confermati e risponde su quelli."
+    }
+  },
+  "projects": {
+    "new": {
+      "title": "Il tuo primo progetto",
+      "body": "Un progetto raccoglie più documenti sotto un'unica mappa di anonimizzazione: gli stessi nomi diventano gli stessi segnaposto in tutti i file e in tutte le chat del progetto. Inizia da qui."
+    }
+  }
+}

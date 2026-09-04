@@ -1,0 +1,130 @@
+{
+  "title": "Impostazioni",
+  "introAdmin": "Valgono dal prossimo documento caricato, senza riavviare il server. I parametri di installazione (core, coda, limite di upload) restano in <code>backend/.env</code>.",
+  "introUser": "Le tue preferenze. Il resto della configurazione è dell'amministratore.",
+  "saving": "Salvataggio…",
+  "revert": "Annulla modifiche",
+  "savedSettings": "Impostazioni salvate",
+  "defaultSuffix": " (default: {{value}})",
+  "section": {
+    "uploads": "Caricamenti e coda",
+    "xlsx": "File Excel",
+    "libreoffice": "Conversione LibreOffice",
+    "chat": "Chat LLM",
+    "sessions": "Sessioni"
+  },
+  "registry": {
+    "max_upload_mb": {
+      "label": "Dimensione massima dei file caricabili (MB)",
+      "help": "Vale per ogni formato: oltre, l'upload viene rifiutato subito (HTTP 413), prima ancora di entrare in coda."
+    },
+    "max_queue": {
+      "label": "Massimo di elaborazioni in attesa",
+      "help": "Oltre, l'upload risponde «coda piena» e l'utente riprova più tardi. I file in attesa vivono nella RAM del server: alzarlo aumenta la memoria che la coda può occupare."
+    },
+    "xlsx_max_chunks": {
+      "label": "Dimensione massima analizzabile (blocchi di testo)",
+      "help": "Il contenuto del foglio viene analizzato dal modello in blocchi da ~120 parole: su una CPU d'ufficio ogni blocco costa circa 0,75 secondi, quindi 800 blocchi ≈ 10 minuti di elaborazione. Oltre il limite il caricamento fallisce con un messaggio che riporta la dimensione del file. 0 = nessun limite."
+    },
+    "xlsx_table_min_rows": {
+      "label": "Righe minime per l'anonimizzazione per colonna",
+      "help": "I fogli in forma tabellare pulita (header + colonne omogenee) con almeno queste righe di dati vengono anonimizzati per colonna: il modello analizza solo un campione e le colonne PII si sostituiscono per intero, in modo deterministico. Sotto la soglia (o se il foglio non è tabellare) si usa l'analisi completa. 0 = percorso disattivato."
+    },
+    "xlsx_table_sample_rows": {
+      "label": "Righe di campione per foglio tabellare",
+      "help": "Quante righe (prime + distribuite + ultima) passano dal modello per decidere quali colonne contengono PII. Più righe = decisione più affidabile ma analisi più lenta."
+    },
+    "xlsx_table_coverage_pct": {
+      "label": "Copertura per marcare una colonna PII (%)",
+      "help": "Percentuale minima di valori campionati riconosciuti come PII perché l'intera colonna venga anonimizzata. Valori sopra 100 equivalgono a 100."
+    },
+    "xlsx_preview_rows": {
+      "label": "Righe per foglio nell'anteprima",
+      "help": "L'anteprima PDF si genera da una copia troncata a queste righe per foglio (il file compare come «anteprima parziale»); la redazione e la verifica dei residui lavorano sempre sul file completo. Migliaia di righe = PDF enormi e conversioni LibreOffice lente."
+    },
+    "lo_timeout_s": {
+      "label": "Timeout di una conversione (secondi)",
+      "help": "Tempo massimo per una singola conversione (formati Office in ingresso e PDF di anteprima): oltre, l'elaborazione fallisce con «conversione scaduta». Alzare su macchine lente se i documenti grandi vanno in timeout."
+    },
+    "chat_max_upload_mb": {
+      "label": "Dimensione massima di un allegato in chat (MB)",
+      "help": "Tetto separato (e più basso) da quello dei file di progetto: gli allegati della chat vengono elaborati nella sandbox e conservati per tutta la conversazione."
+    },
+    "chat_turn_cost_limit_cents": {
+      "label": "Tetto di spesa per singola risposta (centesimi di dollaro)",
+      "help": "Una risposta può costare più di quanto sembri: il modello esegue codice più volte e ogni giro rispedisce tutta la conversazione. Raggiunto il tetto, al modello viene detto di smettere di eseguire codice e rispondere con quello che ha (la risposta arriva comunque). 0 = nessun tetto."
+    },
+    "chat_model_attach_mb": {
+      "label": "Dimensione massima di un file inviato al modello (MB)",
+      "help": "Immagini e PDF vengono mostrati DIRETTAMENTE al modello (se lo supporta), quindi viaggiano in ogni richiesta del turno e si pagano come token: oltre questa soglia il file resta solo nella sandbox, dove il modello lo apre con del codice."
+    },
+    "chat_web_search": {
+      "label": "Consenti la ricerca web nelle chat",
+      "help": "Aggiunge al modello due strumenti di sola lettura (ricerca e lettura pagine) tramite un browser locale al server. ATTENZIONE alle chat anonimizzate: le query di ricerca escono verso il motore (DuckDuckGo) con i valori REALI — la protezione vale sul percorso verso il provider LLM, che continua a vedere solo segnaposto: i contenuti scaricati dal web rientrano anonimizzati e passano dal controllo di uscita. Sui valori non ancora noti al registro la protezione del testo web è best-effort. Ogni utente può spegnere la ricerca nella singola conversazione."
+    },
+    "chat_ai_marking": {
+      "label": "Marca i file generati dall'AI (AI Act, art. 50)",
+      "help": "Scrive nei METADATI di ogni file prodotto dal modello una dicitura machine-readable in inglese («AI-generated content», col codice standard IPTC trainedAlgorithmicMedia): docx/xlsx/pptx nelle proprietà del documento, PDF nei campi Oggetto e Parole chiave, PNG in un blocco di testo interno, SVG in un commento. Il contenuto visibile non cambia mai. csv, json e txt non vengono marcati (un commento ne romperebbe la lettura): per quelli fa fede l'origine registrata dall'applicazione."
+    },
+    "chat_allow_non_zdr": {
+      "label": "Consenti l'uso di modelli senza Zero Data Retention",
+      "help": "Su ogni richiesta imponiamo ai provider Zero Data Retention e nessuna raccolta dati; circa un terzo dei modelli non ha provider conformi e viene rifiutato. Attivando questa voce, chi sceglie uno di quei modelli può concedere una deroga per la SINGOLA conversazione, con l'avviso sempre in vista: il provider potrà conservare i dati inviati e usarli per addestrare i suoi modelli. Disattivata, non può derogare nessuno — nemmeno l'amministratore."
+    },
+    "token_ttl_hours": {
+      "label": "Durata della sessione di login (ore)",
+      "help": "Scaduta, l'utente rifà il login. Vale per i login successivi al salvataggio: le sessioni già aperte mantengono la loro scadenza."
+    }
+  },
+  "anonDefaults": {
+    "title": "Anonimizzazione predefinita",
+    "intro": "Valgono per <b>tutti gli utenti</b> e nessuno può disattivarle. Le categorie si possono restringere per singolo progetto o chat; i termini no — ognuno può solo aggiungere i propri, in «I miei termini».",
+    "policy": "Anonimizzazione chat",
+    "policyRequired": "Obbligatoria",
+    "policyOptional": "Facoltativa",
+    "policyHelp": "Puoi scegliere se forzare tutti gli utenti ad eseguire sempre e solo chat anonimizzate oppure no. Con l'opzione «Facoltativa», si possono eseguire anche chat normali senza l'utilizzo del motore di anonimizzazione.",
+    "saved": "Default di anonimizzazione salvati"
+  },
+  "password": {
+    "title": "Cambia password",
+    "intro": "Serve la password attuale, nessuna email di conferma. La sessione resta aperta: la nuova password vale dal prossimo accesso.",
+    "current": "Password attuale",
+    "new": "Nuova password (min 8 caratteri)",
+    "confirm": "Conferma la nuova password",
+    "mismatch": "Le due password non coincidono.",
+    "submit": "Cambia password",
+    "saved": "Password cambiata",
+    "show": "Mostra password",
+    "hide": "Nascondi password",
+    "forcedTitle": "Scegli una nuova password",
+    "forcedIntro": "L'amministratore richiede di cambiare la password al primo accesso: scegline una nuova per continuare. Quella attuale è la password che ti è stata consegnata."
+  },
+  "myTerms": {
+    "title": "I miei termini da anonimizzare",
+    "intro": "Testi che vuoi coprire sempre nei <b>tuoi</b> progetti e nelle tue chat: nomi di clienti, sigle interne, nomi in codice. Non li vede nessun altro utente. Si aggiungono anche dal riquadro «Anonimizza anche in futuro» quando selezioni del testo in un'anteprima.",
+    "globalsTitle": "Fissati dall'amministratore (valgono anche per te)",
+    "globalsHelp": "Non serve ripeterli qui: sono già coperti e non si possono disattivare.",
+    "saved": "I tuoi termini sono stati salvati"
+  },
+  "defaultModel": {
+    "title": "Modello predefinito della chat",
+    "intro": "Con quale modello nasce una nuova conversazione. Si può fissare un modello preciso oppure farsi guidare da tre domande: in quel caso il modello vero si sceglie all'apertura di ogni chat sul catalogo del momento e resta quello per tutta la conversazione. Nella chat si può sempre cambiarlo.",
+    "mine": "La mia scelta",
+    "mineEmpty": "Default (scelta dell'amministratore)",
+    "resolved": "Adesso apre le chat con <b>{{model}}</b>.",
+    "resolvedNone": "Adesso nessun modello: lo scegli tu a ogni nuova chat.",
+    "admin": "Scelta dell'amministratore (vale per tutti)",
+    "adminEmpty": "Nessuno (lo sceglie ogni utente)",
+    "saved": "Modello predefinito salvato"
+  },
+  "modelAccess": {
+    "title": "Modelli visibili agli utenti",
+    "intro": "Quali modelli possono vedere e scegliere gli utenti che non sono amministratori: tutto il catalogo, oppure solo quelli selezionati qui. Il modello predefinito dell'installazione è sempre incluso. Gli amministratori vedono sempre tutto.",
+    "saved": "Modelli visibili salvati"
+  },
+  "tour": {
+    "title": "Tutorial",
+    "replay": "Rivedi il tutorial",
+    "help": "Il giro guidato del primo accesso: ricomincia dalla pagina Nuova Chat e prosegue nelle pagine che visiti.",
+    "failed": "Impossibile riavviare il tutorial."
+  }
+}
