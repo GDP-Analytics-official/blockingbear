@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { cn } from '@/lib/utils'
 import { groupChecked, splitGroup, toggleGroup } from '@/lib/tagGroups.js'
+import FloatingPanel from './FloatingPanel.jsx'
 
 // Quali categorie di dati vengono coperte in QUESTA conversazione.
 //
@@ -30,15 +31,6 @@ export default function AnonTags({ convId, tags, groups = null, value, onChange,
   const [loading, setLoading] = useState(false)
   const boxRef = useRef(null)
   const { t } = useTranslation('anon')
-
-  useEffect(() => {
-    if (!open) return
-    const onDoc = (e) => {
-      if (boxRef.current && !boxRef.current.contains(e.target)) setOpen(false)
-    }
-    document.addEventListener('mousedown', onDoc)
-    return () => document.removeEventListener('mousedown', onDoc)
-  }, [open])
 
   // il registro si rilegge a ogni apertura: durante la conversazione cresce
   useEffect(() => {
@@ -118,10 +110,11 @@ export default function AnonTags({ convId, tags, groups = null, value, onChange,
       </Button>
 
       {open && (
-        <div className="floating-panel absolute left-0 z-20 mt-1 w-[380px] max-w-[85vw] overflow-hidden rounded-lg border border-border bg-popover shadow-lg">
+        <FloatingPanel anchorRef={boxRef} onClose={() => setOpen(false)} aria-label={t('panel.title')}
+                       className="w-[380px] rounded-lg border border-border bg-popover shadow-lg">
           <div className="flex items-center justify-between border-b border-border px-3 py-2">
             <span className="text-xs font-semibold">{t('panel.title')}</span>
-            <button className="text-muted-foreground hover:text-foreground"
+            <button className="touch-control flex size-7 shrink-0 items-center justify-center text-muted-foreground hover:text-foreground"
                     title={t('actions.close', { ns: 'common' })}
                     onClick={() => setOpen(false)}>
               <X className="size-3.5" />
@@ -145,7 +138,7 @@ export default function AnonTags({ convId, tags, groups = null, value, onChange,
             </div>
           </div>
 
-          <div className="max-h-[50vh] overflow-y-auto p-2">
+          <div className="floating-panel-scroll max-h-[50dvh] overflow-y-auto p-2">
             {all.length === 0 ? (
               <div className="px-1 py-2 text-[11px] text-muted-foreground">
                 {t('panel.noTags')}
@@ -230,7 +223,7 @@ export default function AnonTags({ convId, tags, groups = null, value, onChange,
               <RotateCcw className="size-3" /> {t('panel.reset')}
             </Button>
           </div>
-        </div>
+        </FloatingPanel>
       )}
     </div>
   )

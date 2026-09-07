@@ -82,18 +82,6 @@ export default function ModelSelector({ models, value, onChange, disabled, inlin
     }
   }, [models, query, onlyTools, allowNonZdr, allowedIds, value])
 
-  // chiusura al click fuori
-  React.useEffect(() => {
-    if (!open) return
-    const onDoc = (e) => {
-      const inBox = boxRef.current && boxRef.current.contains(e.target)
-      const inPanel = panelRef.current && panelRef.current.contains(e.target)
-      if (!inBox && !inPanel) setOpen(false)
-    }
-    document.addEventListener('mousedown', onDoc)
-    return () => document.removeEventListener('mousedown', onDoc)
-  }, [open])
-
   return (
     <div className={inline ? 'contents' : 'relative min-w-0 max-w-full'} ref={boxRef}>
       <Button variant="outline" size="sm" disabled={disabled}
@@ -108,15 +96,18 @@ export default function ModelSelector({ models, value, onChange, disabled, inlin
 
       {open && (
         <FloatingPanel inline={inline} panelRef={panelRef}
-                       className={cn(inline ? 'max-w-full' : 'w-[380px] max-w-[80vw]', 'rounded-lg border border-border bg-popover shadow-lg')}>
+                       anchorRef={boxRef} onClose={() => setOpen(false)}
+                       aria-label={t('selector.placeholder')}
+                       className={cn(inline ? 'max-w-full' : 'w-[380px]', 'rounded-lg border border-border bg-popover shadow-lg')}>
           <div className="flex items-center gap-2 border-b border-border px-2.5 py-2">
             <Search className="size-4 shrink-0 text-muted-foreground" />
             <input
               autoFocus
+              data-panel-autofocus
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder={t('selector.search')}
-              className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+              className="min-w-0 w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
             />
           </div>
           <label className="flex cursor-pointer items-center gap-2 border-b border-border px-2.5 py-1.5 text-xs text-muted-foreground">
@@ -125,7 +116,7 @@ export default function ModelSelector({ models, value, onChange, disabled, inlin
             <Wrench className="size-3" />
             {t('selector.onlyTools')}
           </label>
-          <ul className="max-h-[320px] overflow-y-auto py-1">
+          <ul className="floating-panel-scroll max-h-[320px] overflow-y-auto py-1">
             {filtered.length === 0 && (
               <li className="px-3 py-4 text-center text-sm text-muted-foreground">
                 {t('selector.noMatch')}

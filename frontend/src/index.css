@@ -106,7 +106,23 @@
 .chat-composer [data-ui="button"] { flex-shrink: 0; }
 .chat-page { overflow-wrap: anywhere; }
 .chat-page pre, .chat-page table { overflow-wrap: normal; }
+.chat-heading { min-height: 0; max-height: 35%; flex: 0 1 auto; overflow-y: auto; overscroll-behavior: contain; }
+.chat-pending { min-height: 0; max-height: 20%; flex: 0 1 auto; overscroll-behavior: contain; }
+.chat-thread { min-height: min(80px, 20%); overflow: hidden; }
+.chat-thread > button { bottom: min(16px, 5%); max-width: calc(100% - 16px); }
 .page-content { padding: 24px; }
+
+.floating-panel { overflow-wrap: anywhere; }
+.floating-portal {
+  position: fixed;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.floating-portal > * { flex-shrink: 0; }
+.floating-portal > .floating-panel-scroll { min-height: 80px; flex-shrink: 1; overscroll-behavior: contain; }
 
 @media (max-width: 639px) {
   .page-content { padding: 16px; }
@@ -138,20 +154,12 @@
     font-size: 12px;
   }
   .mobile-card-table tbody td[data-label] > div { display: inline-block; }
-  .floating-panel:not(.floating-inline) {
-    position: fixed;
-    inset: auto 12px max(12px, env(safe-area-inset-bottom));
-    z-index: 60;
-    width: auto;
-    max-width: none;
-    max-height: min(70dvh, 600px);
-    overflow-y: auto;
-    overscroll-behavior: contain;
+  .floating-portal {
     border: 2px solid var(--primary);
     box-shadow: 0 -6px 24px rgb(20 28 46 / 0.18), 0 12px 32px rgb(20 28 46 / 0.24);
   }
-  .floating-panel ul { max-height: 40dvh; }
   .chat-toolbar, .chat-stats { gap: 6px; }
+  .chat-toolbar [data-tour="model"] { flex: 1 1 160px; }
   .chat-toolbar [data-tour="model"] > div > button { padding-inline: 8px; gap: 4px; }
   .chat-stats:empty { display: none; }
   .chat-anon-banner > label { min-width: 0; max-width: 100%; white-space: normal; }
@@ -173,6 +181,10 @@
   input, select, textarea { max-width: 100%; }
   [data-ui="button"] { min-height: 44px; white-space: normal; height: auto; }
   [data-ui="button"]:has(> svg:only-child) { min-width: 44px; }
+  .chat-composer textarea {
+    max-height: min(192px, calc(var(--app-height, 100dvh) * 0.2)) !important;
+    overflow-y: auto !important;
+  }
 }
 
 @media (pointer: coarse) {
@@ -181,11 +193,6 @@
   .code-actions { position: static; flex-wrap: wrap; justify-content: flex-end; margin-top: 4px; opacity: 1; }
   .code-actions button { min-height: 44px; }
   input[type="checkbox"], input[type="radio"] { width: 20px; height: 20px; flex-shrink: 0; }
-}
-
-@media (max-height: 500px) and (max-width: 1023px) {
-  .chat-toolbar { max-height: 25dvh; overflow: auto; }
-  .chat-composer textarea { max-height: 25dvh !important; }
 }
 
 /* Tutorial del primo accesso (driver.js, src/onboarding/): il popover parla

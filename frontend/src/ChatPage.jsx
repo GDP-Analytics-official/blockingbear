@@ -22,6 +22,7 @@ import UnconfirmedFilesDialog from '@/components/UnconfirmedFilesDialog.jsx'
 import ModelSelector from '@/components/ModelSelector.jsx'
 import ModelOptions from '@/components/ModelOptions.jsx'
 import AnonTags from '@/components/AnonTags.jsx'
+import FloatingPanel from '@/components/FloatingPanel.jsx'
 import Markdown, { Linkify } from '@/components/Markdown.jsx'
 import { Button } from '@/components/ui/button'
 import {
@@ -673,14 +674,6 @@ function PrivacyNotice({ model, relaxed, allowed, isAdmin, onChange }) {
 function InfoPill({ className, detail, children }) {
   const [open, setOpen] = useState(false)
   const boxRef = useRef(null)
-  useEffect(() => {
-    if (!open) return undefined
-    const onDoc = (e) => {
-      if (boxRef.current && !boxRef.current.contains(e.target)) setOpen(false)
-    }
-    document.addEventListener('mousedown', onDoc)
-    return () => document.removeEventListener('mousedown', onDoc)
-  }, [open])
   return (
     <div className="relative shrink-0" ref={boxRef}>
       <Button type="button" variant="outline" size="sm"
@@ -690,9 +683,10 @@ function InfoPill({ className, detail, children }) {
         {children}
       </Button>
       {open && (
-        <div className="floating-panel absolute right-0 z-20 mt-1 w-[280px] max-w-[85vw] rounded-lg border border-border bg-popover px-3 py-2 text-[11px] leading-snug text-muted-foreground shadow-lg">
+        <FloatingPanel anchorRef={boxRef} align="end" onClose={() => setOpen(false)} aria-label={detail}
+                       className="w-[280px] rounded-lg border border-border bg-popover px-3 py-2 text-[11px] leading-snug text-muted-foreground shadow-lg">
           {detail}
-        </div>
+        </FloatingPanel>
       )}
     </div>
   )
@@ -705,25 +699,19 @@ function StatusErrors({ problems }) {
   const [open, setOpen] = useState(false)
   const boxRef = useRef(null)
   const { t } = useTranslation('chat')
-  useEffect(() => {
-    if (!open) return undefined
-    const onDoc = (e) => {
-      if (boxRef.current && !boxRef.current.contains(e.target)) setOpen(false)
-    }
-    document.addEventListener('mousedown', onDoc)
-    return () => document.removeEventListener('mousedown', onDoc)
-  }, [open])
   if (!problems.length) return null
   return (
     <div className="relative shrink-0" ref={boxRef}>
       <button type="button" onClick={() => setOpen((o) => !o)}
+              aria-expanded={open}
               title={t('banner.errorsHint')}
               className="inline-flex cursor-pointer items-center gap-1 rounded-full border border-destructive/40 bg-card px-2 py-0.5 text-xs text-destructive hover:bg-destructive/10">
         <AlertCircle className="size-3" />
         {t('banner.errors', { count: problems.length })}
       </button>
       {open && (
-        <div className="floating-panel absolute right-0 z-20 mt-1 w-[320px] max-w-[85vw] overflow-hidden rounded-lg border border-border bg-popover shadow-lg">
+        <FloatingPanel anchorRef={boxRef} align="end" onClose={() => setOpen(false)} aria-label={t('banner.errorsHint')}
+                       className="w-[320px] rounded-lg border border-border bg-popover shadow-lg">
           {problems.map(({ key, Icon, title, detail }) => (
             <div key={key} className="flex flex-col gap-1 border-b border-border px-3 py-2 last:border-b-0">
               <span className="inline-flex items-center gap-1.5 text-xs font-medium text-destructive">
@@ -734,7 +722,7 @@ function StatusErrors({ problems }) {
               </span>
             </div>
           ))}
-        </div>
+        </FloatingPanel>
       )}
     </div>
   )
@@ -1817,6 +1805,7 @@ export default function ChatPage() {
           </div>
         ) : (
           <>
+            <div className="chat-heading">
             <header className="chat-toolbar flex shrink-0 flex-wrap items-center gap-2 border-b border-border px-3 py-2 sm:gap-3 sm:px-4 sm:py-2.5">
               <span data-tour="model" className="inline-flex min-w-0 max-w-full flex-1 sm:flex-none">
                 <ModelSelector models={models} value={conv.model}
@@ -1926,11 +1915,13 @@ export default function ChatPage() {
               </div>
             )}
 
+            </div>
+
             {/* Le fusioni NON si gestiscono più qui: l'unico posto in cui si
                 decidono è la revisione pre-invio (ultimo step del modal), più
                 il dialog che ferma il turno quando il registro nasce. */}
 
-            <div className="relative min-h-0 flex-1">
+            <div className="chat-thread relative min-h-0 flex-1">
               <div ref={scrollRef} onScroll={onThreadScroll}
                    className="h-full overflow-y-auto">
                 <div className="mx-auto flex w-full max-w-3xl flex-col gap-4 p-4">
@@ -1959,7 +1950,7 @@ export default function ChatPage() {
             {/* allegati caricati e non ancora inviati: partono col prossimo
                 messaggio (poi restano sotto la sua bolla) */}
             {(pending.length > 0 || myUploads.length > 0) && (
-              <div className="flex max-h-[25dvh] shrink-0 flex-col gap-2 overflow-y-auto border-t border-border px-3 py-2 sm:px-4">
+              <div className="chat-pending flex flex-col gap-2 overflow-y-auto border-t border-border px-3 py-2 sm:px-4">
                 <div className="text-xs text-muted-foreground">
                   {t('composer.pendingTitle')}
                 </div>
@@ -1975,11 +1966,11 @@ export default function ChatPage() {
                       spinner */}
                   {myUploads.map((u) => (
                     <div key={u.key}
-                         className="inline-flex items-center gap-1.5 rounded-md border border-dashed border-border bg-card px-2 py-1.5 text-xs text-muted-foreground">
+                         className="inline-flex min-w-0 max-w-full items-center gap-1.5 rounded-md border border-dashed border-border bg-card px-2 py-1.5 text-xs text-muted-foreground">
                       {u.active
                         ? <Loader2 className="size-3 shrink-0 animate-spin text-primary" />
                         : <Clock className="size-3 shrink-0" />}
-                      <span className="max-w-[220px] truncate text-card-foreground"
+                      <span className="min-w-0 max-w-[220px] truncate text-card-foreground"
                             title={u.name}>{u.name}</span>
                       <span className="shrink-0">
                         {t(u.active ? 'composer.uploading' : 'composer.queued',

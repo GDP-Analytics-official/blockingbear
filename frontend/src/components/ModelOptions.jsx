@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useRef, useState } from 'react'
 import { Sliders, Brain, RotateCcw, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
@@ -53,17 +53,6 @@ export default function ModelOptions({ model, value, onChange, disabled, web, in
   const panelRef = useRef(null)
   const { t } = useTranslation('models')
 
-  useEffect(() => {
-    if (!open) return
-    const onDoc = (e) => {
-      const inBox = boxRef.current && boxRef.current.contains(e.target)
-      const inPanel = panelRef.current && panelRef.current.contains(e.target)
-      if (!inBox && !inPanel) setOpen(false)
-    }
-    document.addEventListener('mousedown', onDoc)
-    return () => document.removeEventListener('mousedown', onDoc)
-  }, [open])
-
   const opts = value || {}
   const r = opts.reasoning || {}
   const params = opts.params || {}
@@ -103,19 +92,21 @@ export default function ModelOptions({ model, value, onChange, disabled, web, in
 
       {open && model && (
         <FloatingPanel inline={inline} panelRef={panelRef}
-                       className={cn(inline ? 'max-w-full' : 'w-[360px] max-w-[85vw] right-0', 'overflow-hidden rounded-lg border border-border bg-popover shadow-lg')}>
+                       anchorRef={boxRef} align="end" onClose={() => setOpen(false)}
+                       aria-label={t('options.title', { model: model.name })}
+                       className={cn(inline ? 'max-w-full' : 'w-[360px]', 'rounded-lg border border-border bg-popover shadow-lg')}>
           <div className="flex items-center justify-between border-b border-border px-3 py-2">
-            <span className="text-xs font-semibold">
+            <span className="min-w-0 text-xs font-semibold">
               {t('options.title', { model: model.name })}
             </span>
-            <button className="text-muted-foreground hover:text-foreground"
+            <button className="touch-control flex size-7 shrink-0 items-center justify-center text-muted-foreground hover:text-foreground"
                     title={t('actions.close', { ns: 'common' })}
                     onClick={() => setOpen(false)}>
               <X className="size-3.5" />
             </button>
           </div>
 
-          <div className="max-h-[60vh] overflow-y-auto">
+          <div className="floating-panel-scroll max-h-[60dvh] overflow-y-auto">
             {/* --- ricerca web (gestita internamente, mai dal catalogo) --- */}
             {web && (
               <Row label={t('options.web.label')}
