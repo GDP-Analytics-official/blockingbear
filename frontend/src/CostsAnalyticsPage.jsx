@@ -196,7 +196,7 @@ export default function CostsAnalyticsPage() {
 
   return (
     <main className="min-w-0 flex-1 overflow-y-auto">
-      <div className="mx-auto flex w-full max-w-4xl flex-col gap-5 p-6">
+      <div className="mx-auto flex w-full page-content max-w-4xl flex-col gap-5">
         <header className="flex flex-wrap items-center gap-2.5">
           <h1 className="text-xl font-semibold tracking-tight">{t('analytics.title')}</h1>
           <span className="text-sm text-muted-foreground">{t('analytics.subtitle')}</span>

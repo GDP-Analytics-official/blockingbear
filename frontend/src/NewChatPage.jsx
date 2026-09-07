@@ -51,8 +51,8 @@ export default function NewChatPage() {
   ]
 
   return (
-    <div className="flex min-h-0 w-full flex-1 items-center justify-center overflow-y-auto p-6">
-      <div className="w-full max-w-xl">
+    <div className="flex min-h-0 w-full flex-1 flex-col overflow-y-auto p-4 sm:p-6">
+      <div className="m-auto w-full max-w-xl shrink-0">
         <div className="mb-5 flex flex-col gap-1 text-center">
           <h1 className="text-lg font-semibold">{t('newDialog.title')}</h1>
           <p className="text-sm text-muted-foreground">{t('newDialog.description')}</p>

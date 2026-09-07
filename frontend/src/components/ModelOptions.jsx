@@ -33,7 +33,7 @@ const CONTROLS = [
 function Row({ label, help, children }) {
   return (
     <div className="flex flex-col gap-1 border-b border-border px-3 py-2 last:border-b-0">
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <span className="text-xs font-medium">{label}</span>
         {children}
       </div>
@@ -93,6 +93,7 @@ export default function ModelOptions({ model, value, onChange, disabled, web, in
   return (
     <div className={inline ? 'contents' : 'relative'} ref={boxRef}>
       <Button variant="outline" size="sm" disabled={disabled || !model}
+              aria-expanded={open} aria-label={t('options.open')}
               title={t(model ? 'options.open' : 'options.pickFirst')}
               className={cn('gap-1.5', touched && 'border-primary text-primary')}
               onClick={() => setOpen((o) => !o)}>
@@ -142,7 +143,7 @@ export default function ModelOptions({ model, value, onChange, disabled, web, in
                 {enabled && efforts.length > 0 && (
                   <Row label={t('options.reasoning.effort')}
                        help={t('options.reasoning.effortHelp')}>
-                    <div className="flex gap-1">
+                    <div className="flex flex-wrap gap-1">
                       <button
                         className={cn('rounded border px-1.5 py-0.5 text-[11px]',
                                       !r.effort ? 'border-primary text-primary' : 'border-border text-muted-foreground')}

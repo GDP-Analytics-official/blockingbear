@@ -49,6 +49,7 @@ import xml.etree.ElementTree as ET
 
 from . import image_ocr
 from .pdf_export import _too_noisy, _value_pattern
+from .text_patterns import contains_literal
 
 W_NS = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
 W = "{%s}" % W_NS
@@ -591,10 +592,10 @@ def redact_docx(docx_bytes, mapping, ocr_cache=None):
 
     skipped, usable = [], []
     for ph, val in items:
-        if _too_noisy(val):
+        if _too_noisy(val, ph):
             skipped.append(ph)
             continue
-        pat = _value_pattern(val)
+        pat = _value_pattern(val, ph)
         if pat:
             usable.append((ph, val, pat))
         else:
@@ -761,7 +762,7 @@ def _verify_residuals(docx_bytes, items):
     haystack = text + "\n" + "\n".join(extra)
     residual = []
     for ph, val in items:
-        pat = _value_pattern(val)
-        if pat and pat.search(haystack):
+        pat = _value_pattern(val, ph)
+        if (pat and pat.search(haystack)) or contains_literal(haystack, val, ph):
             residual.append(ph)
     return residual

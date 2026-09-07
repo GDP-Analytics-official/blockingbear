@@ -22,9 +22,9 @@ export default function ForcePassword() {
   usePageTitle(t('password.title'))
 
   return (
-    <div className="grid h-full place-items-center px-4">
+    <div className="grid min-h-full place-items-center px-4 py-6">
       <div className="w-full max-w-sm">
-        <div className="flex flex-col gap-5 rounded-xl border border-border bg-card p-8 shadow-[0_10px_40px_rgba(20,28,46,0.08)]">
+        <div className="flex flex-col gap-5 rounded-xl border border-border bg-card p-5 sm:p-8 shadow-[0_10px_40px_rgba(20,28,46,0.08)]">
           <Logo />
           <div>
             <h2 className="text-base font-semibold">{t('password.forcedTitle')}</h2>

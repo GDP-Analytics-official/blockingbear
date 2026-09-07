@@ -284,7 +284,7 @@ export default function SetupWizard({ status, onDone }) {
                          onKeyDown={(e) => { if (e.key === 'Enter' && key.trim()) saveKey() }} />
                 </div>
                 {error && <p className="text-sm text-destructive">{error}</p>}
-                <div className="flex justify-between gap-2">
+                <div className="flex flex-wrap justify-between gap-2">
                   <Button type="button" variant="ghost" disabled={busy} onClick={() => setStep(1)}>
                     {t('back')}
                   </Button>
@@ -309,7 +309,7 @@ export default function SetupWizard({ status, onDone }) {
                 <p className="rounded-md border border-green-600/40 bg-green-600/10 px-3 py-2 text-sm text-green-700 dark:text-green-400">
                   {t('admin.already')}
                 </p>
-                <div className="flex justify-between gap-2">
+                <div className="flex flex-wrap justify-between gap-2">
                   <Button type="button" variant="ghost" onClick={() => setStep(2)}>{t('back')}</Button>
                   <div className="flex gap-2">
                     <Button type="button" variant="outline" onClick={() => setRecreating(true)}>
@@ -336,7 +336,7 @@ export default function SetupWizard({ status, onDone }) {
                 <PwField id="setup-pw2" label={t('admin.confirm')} value={confirm}
                          onChange={setConfirm} />
                 {error && <p className="text-sm text-destructive">{error}</p>}
-                <div className="flex justify-between gap-2">
+                <div className="flex flex-wrap justify-between gap-2">
                   <Button type="button" variant="ghost" disabled={busy}
                           onClick={() => (recreating ? setRecreating(false) : setStep(2))}>
                     {t('back')}
@@ -363,7 +363,7 @@ export default function SetupWizard({ status, onDone }) {
                     <span>{t('categories.allWarning')}</span>
                   </div>
                 )}
-                <div className="flex justify-between gap-2">
+                <div className="flex flex-wrap justify-between gap-2">
                   <Button type="button" variant="ghost" disabled={busy} onClick={() => setStep(3)}>
                     {t('back')}
                   </Button>
@@ -380,7 +380,7 @@ export default function SetupWizard({ status, onDone }) {
                 <p className="text-sm text-muted-foreground">{t('terms.intro')}</p>
                 <TermsEditor terms={terms} tags={tags} onChange={setTerms}
                              datalistId="setup-tag-list" />
-                <div className="flex justify-between gap-2">
+                <div className="flex flex-wrap justify-between gap-2">
                   <Button type="button" variant="ghost" disabled={busy} onClick={() => setStep(4)}>
                     {t('back')}
                   </Button>
@@ -398,7 +398,7 @@ export default function SetupWizard({ status, onDone }) {
                 <div className="flex flex-col gap-1.5 rounded-md border border-border bg-card p-3 shadow-sm">
                   <Label htmlFor="setup-policy">{t('chat.policy')}</Label>
                   <select id="setup-policy"
-                          className="h-9 w-56 rounded-md border border-input bg-card px-3 text-sm"
+                          className="h-9 w-full sm:w-56 rounded-md border border-input bg-card px-3 text-sm"
                           value={policy} onChange={(e) => setPolicy(e.target.value)}>
                     <option value="optional">{t('chat.policyOptional')}</option>
                     <option value="required">{t('chat.policyRequired')}</option>
@@ -412,7 +412,7 @@ export default function SetupWizard({ status, onDone }) {
                   </label>
                   <p className="text-xs text-muted-foreground">{t('chat.zdrHelp')}</p>
                 </div>
-                <div className="flex justify-between gap-2">
+                <div className="flex flex-wrap justify-between gap-2">
                   <Button type="button" variant="ghost" disabled={busy} onClick={() => setStep(5)}>
                     {t('back')}
                   </Button>
@@ -434,7 +434,7 @@ export default function SetupWizard({ status, onDone }) {
                 {models !== null && models.length === 0 && (
                   <p className="text-xs text-muted-foreground">{t('model.noCatalog')}</p>
                 )}
-                <div className="flex justify-between gap-2">
+                <div className="flex flex-wrap justify-between gap-2">
                   <Button type="button" variant="ghost" disabled={busy} onClick={() => setStep(6)}>
                     {t('back')}
                   </Button>
@@ -454,7 +454,7 @@ export default function SetupWizard({ status, onDone }) {
                                    onChange={setModelAccess} locked={lockedModel}
                                    allowNonZdr={allowNonZdr} />
                 {error && <p className="text-sm text-destructive">{error}</p>}
-                <div className="flex justify-between gap-2">
+                <div className="flex flex-wrap justify-between gap-2">
                   <Button type="button" variant="ghost" disabled={busy} onClick={() => setStep(7)}>
                     {t('back')}
                   </Button>

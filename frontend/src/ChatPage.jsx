@@ -1,3 +1,5 @@
+import { useMediaQuery } from '@/lib/useMediaQuery.js'
+import ResponsiveSidebar from '@/components/ResponsiveSidebar.jsx'
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -5,7 +7,7 @@ import {
   Plus, Trash2, Send, Square, Paperclip, Loader2, FileDown, FolderKanban,
   Terminal, ChevronRight, ChevronDown, AlertCircle, Brain, MessageSquarePlus, ShieldOff,
   ShieldCheck, ShieldAlert, Lock, LockOpen, Check, Globe, BookOpen, ScanText,
-  Clock, Copy,
+  Clock, Copy, FileUp,
 } from 'lucide-react'
 import { Trans, useTranslation } from 'react-i18next'
 import { useAuth } from './auth.jsx'
@@ -51,15 +53,6 @@ function fmtDuration(ms) {
   if (s < 10) return `${s.toFixed(1)} s`
   if (s < 60) return `${Math.round(s)} s`
   return `${Math.floor(s / 60)} min ${Math.round(s % 60)} s`
-}
-
-// Conteggi di contesto: "38,4k" e "200k" si confrontano a colpo d'occhio,
-// "38412 / 200000" no.
-function fmtTokens(n) {
-  if (n == null) return null
-  if (n < 1000) return String(n)
-  if (n < 1e6) return `${(n / 1000).toFixed(n < 10000 ? 1 : 0)}k`
-  return `${(n / 1e6).toFixed(1)}M`
 }
 
 // L'SVG resta fuori: è un raster in meno da guardare (nelle chat anonimizzate
@@ -324,12 +317,12 @@ function AttachmentChip({ convId, att, pending = false, busy = false, onRemove }
   )
   if (hasAnonymized) {
     return (
-      <div className="inline-flex flex-col gap-1.5 rounded-md border border-border bg-card px-2 py-1.5 text-xs text-card-foreground">
+      <div className="inline-flex min-w-0 max-w-full flex-col gap-1.5 rounded-md border border-border bg-card px-2 py-1.5 text-xs text-card-foreground">
         <span className="max-w-[220px] truncate"
               title={`${att.filename} · ${fmtBytes(att.size)}${hint}`}>
           {att.filename}
         </span>
-        <div className="flex items-center gap-1.5">
+        <div className="flex flex-wrap items-center gap-1.5">
           <button type="button"
                   className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-primary/50 px-2 py-1 font-medium text-primary hover:bg-primary/10"
                   onClick={downloadAnonymized}
@@ -349,13 +342,13 @@ function AttachmentChip({ convId, att, pending = false, busy = false, onRemove }
   }
   if (pending) {
     return (
-      <div className="inline-flex flex-col gap-1.5 rounded-md border border-border bg-card px-2 py-1.5 text-xs text-card-foreground">
+      <div className="inline-flex min-w-0 max-w-full flex-col gap-1.5 rounded-md border border-border bg-card px-2 py-1.5 text-xs text-card-foreground">
         <span className="max-w-[220px] truncate"
               title={`${att.filename} · ${fmtBytes(att.size)}${hint}`}>
           {att.filename}
         </span>
         <AttachmentState att={att} />
-        <div className="flex items-center gap-1.5">
+        <div className="flex flex-wrap items-center gap-1.5">
           <button type="button"
                   className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-foreground/30 px-2 py-1 text-foreground/85 hover:bg-accent hover:text-foreground"
                   onClick={downloadOriginal}
@@ -368,7 +361,7 @@ function AttachmentChip({ convId, att, pending = false, busy = false, onRemove }
     )
   }
   return (
-    <div className="inline-flex flex-col gap-1 rounded-md border border-border bg-card px-2 py-1 text-xs text-card-foreground">
+    <div className="inline-flex min-w-0 max-w-full flex-col gap-1 rounded-md border border-border bg-card px-2 py-1 text-xs text-card-foreground">
       <button type="button"
               onClick={downloadOriginal}
               className="inline-flex cursor-pointer items-center gap-1.5 hover:text-primary"
@@ -415,7 +408,7 @@ function AttachmentImage({ convId, att }) {
           <Loader2 className="size-4 animate-spin text-muted-foreground" />
         </div>
       )}
-      <figcaption className="flex items-center gap-2 text-[11px] text-muted-foreground">
+      <figcaption className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
         <span className="truncate">{att.filename} · {fmtBytes(att.size)}</span>
         <button className="inline-flex items-center gap-1 hover:text-foreground"
                 onClick={() => downloadFile(api.chatAttachmentUrl(convId, att.id), att.filename)
@@ -453,8 +446,8 @@ function Attachments({ convId, atts }) {
 // download vero è il chip sotto il messaggio.
 function stripSandboxLinks(text) {
   return text
-    .replace(/\[([^\]]+)\]\((?:[a-z][a-z0-9+.-]*:\/*)?\/?(?:workspace|mnt)\/[^)]*\)/gi, '$1')
-    .replace(/\[([^\]]+)\]\((?:sandbox|attachment|computer):[^)]*\)/gi, '$1')
+    .replace(/\[([^\[\]]+)\]\((?:[a-z][a-z0-9+.-]*:\/*)?\/?(?:workspace|mnt)\/[^)]*\)/gi, '$1')
+    .replace(/\[([^\[\]]+)\]\((?:sandbox|attachment|computer):[^)]*\)/gi, '$1')
 }
 
 // Copia il SOLO testo del messaggio: niente allegati, niente meta (modello,
@@ -474,7 +467,7 @@ function CopyMessage({ text, className }) {
     <button type="button" onClick={copy}
             title={t(copied ? 'message.copied' : 'message.copy')}
             aria-label={t('message.copy')}
-            className={cn('inline-flex size-5 shrink-0 cursor-pointer items-center justify-center rounded',
+            className={cn('touch-control inline-flex size-5 shrink-0 cursor-pointer items-center justify-center rounded',
                           'opacity-70 transition-opacity hover:opacity-100 focus-visible:opacity-100',
                           className)}>
       {copied ? <Check className="size-3" /> : <Copy className="size-3" />}
@@ -517,7 +510,7 @@ function Message({ msg, convId, attachments, streaming = false }) {
           spezza dove serve. Si eredita da tutto il contenuto; i blocchi di
           codice (white-space: pre) non ne sono toccati e scrollano in
           orizzontale come prima. */}
-      <div className={cn('flex min-w-0 max-w-[85%] flex-col gap-2 break-words rounded-2xl px-4 py-2.5',
+      <div className={cn('flex min-w-0 max-w-[95%] sm:max-w-[85%] flex-col gap-2 break-words rounded-2xl px-4 py-2.5',
                          isUser ? 'bg-primary text-primary-foreground'
                                 : 'bg-card border border-border',
                          !isUser && (msg.content || msg.reasoning || msg.error
@@ -551,7 +544,7 @@ function Message({ msg, convId, attachments, streaming = false }) {
         {/* ultima riga della bolla (e quindi del thread): finché c'è, il
             modello non ha finito */}
         {streaming && (
-          <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+          <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
             <TypingDots />
             <span>{liveLabel(msg, t)}</span>
           </div>
@@ -675,7 +668,7 @@ function PrivacyNotice({ model, relaxed, allowed, isAdmin, onChange }) {
   )
 }
 
-// Pill di testata con pannellino al click (stesso stile degli altri popup):
+// Controlli di testata con pannellino al click:
 // per contesto e costo la spiegazione è troppo lunga per un tooltip.
 function InfoPill({ className, detail, children }) {
   const [open, setOpen] = useState(false)
@@ -690,14 +683,14 @@ function InfoPill({ className, detail, children }) {
   }, [open])
   return (
     <div className="relative shrink-0" ref={boxRef}>
-      <button type="button" onClick={() => setOpen((o) => !o)}
-              className={cn(
-                'inline-flex cursor-pointer items-center rounded-full border px-2 py-0.5 text-xs',
-                className)}>
+      <Button type="button" variant="outline" size="sm"
+              aria-label={detail} aria-expanded={open}
+              onClick={() => setOpen((o) => !o)}
+              className={cn('min-w-11 px-2 tabular-nums', className)}>
         {children}
-      </button>
+      </Button>
       {open && (
-        <div className="absolute right-0 z-20 mt-1 w-[280px] max-w-[85vw] rounded-lg border border-border bg-popover px-3 py-2 text-[11px] leading-snug text-muted-foreground shadow-lg">
+        <div className="floating-panel absolute right-0 z-20 mt-1 w-[280px] max-w-[85vw] rounded-lg border border-border bg-popover px-3 py-2 text-[11px] leading-snug text-muted-foreground shadow-lg">
           {detail}
         </div>
       )}
@@ -730,7 +723,7 @@ function StatusErrors({ problems }) {
         {t('banner.errors', { count: problems.length })}
       </button>
       {open && (
-        <div className="absolute right-0 z-20 mt-1 w-[320px] max-w-[85vw] overflow-hidden rounded-lg border border-border bg-popover shadow-lg">
+        <div className="floating-panel absolute right-0 z-20 mt-1 w-[320px] max-w-[85vw] overflow-hidden rounded-lg border border-border bg-popover shadow-lg">
           {problems.map(({ key, Icon, title, detail }) => (
             <div key={key} className="flex flex-col gap-1 border-b border-border px-3 py-2 last:border-b-0">
               <span className="inline-flex items-center gap-1.5 text-xs font-medium text-destructive">
@@ -782,7 +775,7 @@ function AnonProgress({ state }) {
   const pct = anonPercent(p)
   return (
     <div className="flex justify-start">
-      <div className="flex min-w-0 max-w-[85%] flex-col gap-2 rounded-2xl border border-emerald-500/40 bg-emerald-500/5 px-4 py-3">
+      <div className="flex min-w-0 max-w-[95%] sm:max-w-[85%] flex-col gap-2 rounded-2xl border border-emerald-500/40 bg-emerald-500/5 px-4 py-3">
         <span className="inline-flex items-center gap-2 text-sm font-medium text-emerald-700 dark:text-emerald-400">
           <Lock className="size-4" />
           {t('anonProgress.heading', { current, total: pieces.length })}
@@ -848,6 +841,7 @@ export default function ChatPage() {
   // /chats/:chatId: una chat LIBERA — l'elenco sta nella sidebar principale
   // (DashboardLayout) e la nuova chat nasce dalla pagina /new
   const { projectId, chatId } = useParams()
+  const compact = useMediaQuery('(max-width: 639px)')
   const navigate = useNavigate()
   const { refresh: refreshFreeChats } = useChats()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -915,6 +909,12 @@ export default function ChatPage() {
   const uploadQueue = useRef([])
   const uploadRunning = useRef(false)
   const uploadSeq = useRef(0)
+  // file trascinati dal PC sopra il thread: l'overlay «rilascia qui» si vede
+  // finché il puntatore sta sul thread. Il contatore serve perché il browser
+  // manda un dragleave a ogni figlio attraversato: si spegne solo quando si
+  // esce davvero dal thread, non passando da una bolla all'altra.
+  const [dragOver, setDragOver] = useState(false)
+  const dragDepth = useRef(0)
   // la rielaborazione con OCR di un allegato dell'anteprima è un JOB, come i
   // caricamenti dei progetti: la card sta nella sidebar e a fine lavoro
   // docRefresh dice quale allegato è cambiato
@@ -944,8 +944,8 @@ export default function ChatPage() {
   // endpoint dei file di progetto; le modifiche rispondono con TUTTI gli item
   // (la mappa è condivisa).
   const stagedServices = useMemo(() => ({
-    fetchPagePng: (itemId, source, n, rev) =>
-      fetchStagedPagePng(activeId, itemId, source, n, rev),
+    fetchPagePng: (itemId, source, n, rev, signal) =>
+      fetchStagedPagePng(activeId, itemId, source, n, rev, signal),
     extractText: (itemId, source, page, rect) =>
       api.stagedExtractText(activeId, itemId, source, page, rect),
     deanonymize: (_itemId, body) => api.stagedDeanonymize(activeId, body),
@@ -1233,6 +1233,53 @@ export default function ChatPage() {
       return new File([f], `screenshot-${stamp}${n}${ext}`, { type: f.type })
     }))
   }
+
+  // Trascinare file dal PC sulla conversazione: diventano allegati come dal
+  // selettore. Si reagisce solo a trascinamenti di FILE (non a testo o
+  // immagini trascinate da dentro la pagina), e durante la risposta il
+  // rilascio non fa niente, come il bottone della graffetta disabilitato.
+  function dragHasFiles(e) {
+    return Array.from(e.dataTransfer?.types || []).includes('Files')
+  }
+  function onDragEnter(e) {
+    if (!dragHasFiles(e)) return
+    e.preventDefault()
+    dragDepth.current += 1
+    setDragOver(true)
+  }
+  function onDragOver(e) {
+    if (!dragHasFiles(e)) return
+    // senza preventDefault il browser aprirebbe il file al rilascio
+    e.preventDefault()
+    e.dataTransfer.dropEffect = streaming ? 'none' : 'copy'
+  }
+  function onDragLeave(e) {
+    if (!dragHasFiles(e)) return
+    dragDepth.current = Math.max(0, dragDepth.current - 1)
+    if (dragDepth.current === 0) setDragOver(false)
+  }
+  function onDrop(e) {
+    if (!dragHasFiles(e)) return
+    e.preventDefault()
+    dragDepth.current = 0
+    setDragOver(false)
+    if (streaming) return
+    // una cartella trascinata arriva come File vuoto senza tipo: si scarta
+    // qui, invece di farla rifiutare dal server con un errore fuorviante
+    const items = Array.from(e.dataTransfer.items || [])
+    let files
+    if (items.length) {
+      files = items
+        .filter((it) => it.kind === 'file' && !it.webkitGetAsEntry?.()?.isDirectory)
+        .map((it) => it.getAsFile()).filter(Boolean)
+      if (!files.length) { toast.error(t('composer.dropFolder')); return }
+    } else {
+      files = Array.from(e.dataTransfer.files || [])
+    }
+    enqueueFiles(files)
+  }
+  const dropProps = conv
+    ? { onDragEnter, onDragOver, onDragLeave, onDrop } : {}
 
   function enqueueFiles(files) {
     const convId = activeIdRef.current
@@ -1619,12 +1666,10 @@ export default function ChatPage() {
     .filter((a) => a.direction === 'in' && !a.message_id)
   // la coda è globale alla pagina: i chip sono solo quelli di QUESTA chat
   const myUploads = uploads.filter((u) => u.convId === conv?.id)
-  const anonPolicy = conv?.chat_anonymization_policy ||
-    status?.chat_anonymization_policy || 'optional'
   const isAnon = !!conv?.anonymized
 
   return (
-    <div className="flex min-h-0 w-full flex-1">
+    <div className="chat-page flex min-h-0 min-w-0 w-full flex-1 flex-col xl:flex-row">
       {/* file del progetto ancora da confermare: il modello non li vedrebbe */}
       <UnconfirmedFilesDialog open={!!askUnconfirmed}
                               onOpenChange={(o) => { if (!o) setAskUnconfirmed(null) }}
@@ -1698,8 +1743,9 @@ export default function ChatPage() {
       {/* elenco conversazioni: solo nelle chat di progetto (per le chat
           libere l'elenco sta nella sidebar principale) */}
       {projectId && (
-        <aside className="flex w-[240px] flex-none flex-col border-r border-border bg-card/40">
-          <div className="flex flex-col gap-2 p-3">
+        <ResponsiveSidebar title={t('title')} breakpoint={1280}
+                           className="flex w-[240px] flex-none flex-col border-r border-border bg-card">
+          <div className="flex flex-col gap-2 p-3 pt-14 xl:pt-3">
             <Link to={`/projects/${projectId}`}
                   className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground hover:underline">
               <FolderKanban className="size-3.5 shrink-0" />
@@ -1726,7 +1772,7 @@ export default function ChatPage() {
                     : <LockOpen className="size-3 shrink-0 text-amber-600 dark:text-amber-400" />}
                   <span className="min-w-0 flex-1 truncate">{c.title}</span>
                   <Trash2
-                    className="size-3.5 shrink-0 text-muted-foreground opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100"
+                    className="touch-action size-3.5 shrink-0 text-muted-foreground opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100"
                     onClick={(e) => removeChat(c.id, e)}
                   />
                 </button>
@@ -1738,11 +1784,24 @@ export default function ChatPage() {
               </li>
             )}
           </ul>
-        </aside>
+        </ResponsiveSidebar>
       )}
 
-      {/* thread */}
-      <main className="flex min-h-0 min-w-0 flex-1 flex-col">
+      {/* thread: tutta l'area accetta file trascinati dal PC */}
+      <main className="relative flex min-h-0 min-w-0 flex-1 flex-col" {...dropProps}>
+        {dragOver && conv && (
+          <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+            <div className={cn(
+              'flex flex-col items-center gap-2 rounded-xl border-2 border-dashed px-8 py-6',
+              streaming ? 'border-muted-foreground text-muted-foreground' : 'border-primary text-primary'
+            )}>
+              <FileUp className="size-8" />
+              <p className="text-sm font-medium">
+                {t(streaming ? 'composer.dropWait' : 'composer.dropHere')}
+              </p>
+            </div>
+          </div>
+        )}
         {!conv ? (
           <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center text-muted-foreground">
             {/* nel progetto è un invito a scegliere dall'aside; nella chat
@@ -1758,8 +1817,8 @@ export default function ChatPage() {
           </div>
         ) : (
           <>
-            <header className="flex items-center gap-3 border-b border-border px-4 py-2.5">
-              <span data-tour="model" className="inline-flex">
+            <header className="chat-toolbar flex shrink-0 flex-wrap items-center gap-2 border-b border-border px-3 py-2 sm:gap-3 sm:px-4 sm:py-2.5">
+              <span data-tour="model" className="inline-flex min-w-0 max-w-full flex-1 sm:flex-none">
                 <ModelSelector models={models} value={conv.model}
                                allowNonZdr={!!status?.allow_non_zdr}
                                allowedIds={allowedIds}
@@ -1784,30 +1843,26 @@ export default function ChatPage() {
                             onChange={setAnonTags} disabled={streaming} />
                 </span>
               )}
-              <div className="ml-auto flex shrink-0 items-center gap-3">
-                {/* contesto e costo: due pill distinti, fondo carta (bianco in
-                    tema chiaro) e bordo più marcato; la spiegazione si apre
-                    al click, non in tooltip */}
+              <div className="chat-stats ml-auto flex shrink-0 items-center gap-2 sm:gap-3">
+                {/* Contesto e costo condividono lo stile dei parametri;
+                    il dettaglio completo resta disponibile al click. */}
                 {ctxUsed > 0 && ctxMax > 0 && (() => {
                   const pct = Math.min(100,
                                        Math.round((ctxUsed / ctxMax) * 100))
                   return (
                     <InfoPill className={cn(
-                                'border-foreground/25 bg-card',
                                 pct >= 95 ? 'text-destructive'
                                   : pct >= 80 ? 'text-amber-700 dark:text-amber-400'
                                   : 'text-foreground')}
                               detail={t('banner.contextTitle', {
                                 used: fmtInt(ctxUsed), max: fmtInt(ctxMax),
                                 pct })}>
-                      {t('banner.context', {
-                        used: fmtTokens(ctxUsed), max: fmtTokens(ctxMax),
-                        pct })}
+                      {compact ? `${pct}%` : t('banner.contextPct', { pct })}
                     </InfoPill>
                   )
                 })()}
                 {conv.usage_total?.cost > 0 && (
-                  <InfoPill className="border-foreground/25 bg-card text-foreground"
+                  <InfoPill className="text-foreground"
                             detail={t('banner.costTitle', {
                               cost: conv.usage_total.cost.toFixed(6),
                               prompt: fmtInt(conv.usage_total.prompt_tokens),
@@ -1852,12 +1907,7 @@ export default function ChatPage() {
                              ...(conv.options || {}), allow_non_zdr: on })} />
 
             {isAnon && (
-              <div className="flex items-center gap-2 border-b border-border bg-emerald-500/10 px-4 py-2 text-sm text-emerald-700 dark:text-emerald-400">
-                <Lock className="size-4 shrink-0" />
-                <span className="flex-1">
-                  {t(anonPolicy === 'required' ? 'banner.anonRequired'
-                                               : 'banner.anonOn')}
-                </span>
+              <div className="chat-anon-banner flex shrink-0 flex-wrap items-center gap-2 border-b border-border bg-emerald-500/10 px-4 py-2 text-sm text-emerald-700 dark:text-emerald-400">
                 {/* scelta dell'utente: invio diretto (default) o revisione
                     dell'anonimizzazione prima di far partire qualsiasi cosa */}
                 <label className={cn(
@@ -1909,7 +1959,7 @@ export default function ChatPage() {
             {/* allegati caricati e non ancora inviati: partono col prossimo
                 messaggio (poi restano sotto la sua bolla) */}
             {(pending.length > 0 || myUploads.length > 0) && (
-              <div className="flex flex-col gap-2 border-t border-border px-4 py-2">
+              <div className="flex max-h-[25dvh] shrink-0 flex-col gap-2 overflow-y-auto border-t border-border px-3 py-2 sm:px-4">
                 <div className="text-xs text-muted-foreground">
                   {t('composer.pendingTitle')}
                 </div>
@@ -1955,9 +2005,9 @@ export default function ChatPage() {
             )}
 
             {/* composer */}
-            <div className="border-t border-border p-3">
+            <div className="chat-composer shrink-0 border-t border-border p-3">
               <div className="mx-auto flex w-full max-w-3xl items-end gap-2" data-tour="composer">
-                <Button variant="outline" size="icon" title={t('composer.attach')}
+                <Button variant="outline" size="icon" aria-label={t('composer.attach')} title={t('composer.attach')}
                         disabled={streaming}
                         onClick={() => fileRef.current?.click()}>
                   {myUploads.length > 0 ? <Loader2 className="animate-spin" /> : <Paperclip />}
@@ -1973,9 +2023,10 @@ export default function ChatPage() {
                     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() }
                   }}
                   rows={1}
-                  placeholder={t('composer.placeholder')}
+                  placeholder={t(compact ? 'composer.placeholderMobile' : 'composer.placeholder')}
                   disabled={streaming}
-                  className="min-h-[40px] flex-1 resize-none rounded-md border border-input bg-card px-3 py-2 text-sm outline-none focus-visible:border-ring disabled:opacity-60"
+                  aria-label={t('composer.placeholder')}
+                  className="min-h-[44px] min-w-0 flex-1 resize-none rounded-md border border-input bg-card px-3 py-2 text-sm outline-none focus-visible:border-ring disabled:opacity-60"
                 />
                 {streaming ? (
                   <Button variant="destructive" size="icon"
@@ -1985,6 +2036,7 @@ export default function ChatPage() {
                   </Button>
                 ) : (
                   <Button size="icon"
+                          aria-label={t('composer.send')}
                           title={t(myUploads.length > 0 ? 'composer.waitUploads' : 'composer.send')}
                           disabled={!input.trim() || keyMissing || myUploads.length > 0}
                           onClick={send}>

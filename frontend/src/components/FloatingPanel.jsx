@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils'
 export default function FloatingPanel({ inline = false, className, children, panelRef }) {
   return (
     <div ref={panelRef}
-         className={cn(inline ? 'mt-1 w-full' : 'absolute z-20 mt-1', className)}>
+         className={cn('floating-panel', inline ? 'floating-inline mt-1 w-full' : 'absolute z-20 mt-1', className)}>
       {children}
     </div>
   )

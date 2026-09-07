@@ -1,4 +1,5 @@
 {
+  "mobile": {"select": "Select area", "selecting": "Selection active", "zoomIn": "Zoom in", "zoomOut": "Zoom out"},
   "tab": {
     "compare": "Comparison",
     "mapping": "Map ({{count}})"
@@ -14,6 +15,7 @@
     "sealToggleHint": "Draw a black rectangle that permanently removes the content underneath from the anonymised file"
   },
   "page": {
+    "loadError": "Unable to load this page.",
     "alt": "page {{n}}",
     "originalGone": "Original unavailable (upload the file again to see it)."
   },

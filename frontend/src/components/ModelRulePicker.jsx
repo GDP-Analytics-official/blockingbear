@@ -140,7 +140,7 @@ export default function ModelRulePicker({ models, value, onChange, emptyLabel,
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <select className="h-9 rounded-md border border-input bg-card px-3 text-sm"
+      <select className="h-9 min-w-0 max-w-full rounded-md border border-input bg-card px-3 text-sm"
               value={kind} onChange={(e) => setKind(e.target.value)}>
         <option value="default">{emptyLabel}</option>
         <option value="fixed">{t('rule.fixed')}</option>

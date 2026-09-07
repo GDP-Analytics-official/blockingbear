@@ -63,10 +63,11 @@ A/B/C-1/2/3 e orientamento orizzontale (printOptions/pageSetup): la conversione
 Word invece di un foglio di calcolo.
 
 LIMITI NOTI E DELIBERATI
-I NOMI DEI FOGLI non vengono redatti (rinominarli spezzerebbe ogni
-formula/riferimento che li cita: 'Mario'!A1) e i definedNames non vengono
-toccati (sono riferimenti nella quasi totalità dei casi); entrambi sono però
-SVUOTATI dalla copia in docProps/app.xml. Il testo dentro le immagini è
+Worksheet and defined names are redacted together with their references.
+Dynamic INDIRECT/EVALUATE references that cannot be safely rewritten reject
+the operation. Hidden defined-name templates retain only protected text for
+restoration; the original names are never stored in the protected package.
+Il testo dentro le immagini è
 coperto solo con ocr=True (vedi anonymize_xlsx), come per gli altri formati
 OOXML. I .xls binari e i .xlsm con macro si convertono in .xlsx all'ingresso
 (le macro non sopravvivono: possono contenere PII e riscriverle non è
@@ -92,6 +93,10 @@ from .docx import (_alt_text_surfaces, _meta_surfaces, _part_namespaces,
                    _scrub_core_props, _scrub_rels, _serialize_part, _set_text)
 from .pptx import _redact_tree as _redact_drawing_tree
 from .pdf_export import _too_noisy, _value_pattern
+from .text_patterns import contains_literal
+from .detectors import EXACT_SPAN_LABELS
+from .xlsx_matching import CellValues, ValueIndex, patterns
+from .xlsx_names import redact_names, workbook_surfaces, reference_surfaces
 
 X_NS = "http://schemas.openxmlformats.org/spreadsheetml/2006/main"
 X = "{%s}" % X_NS
@@ -351,6 +356,13 @@ def _sheet_extra_lines(root, full=False):
     for el in root.iter():
         if el.tag in _SHEET_TEXT_TAGS and el.text and el.text.strip():
             lines.append(el.text)
+        elif el.tag == X + "f" and el.text:
+            if full:
+                lines.append(el.text)
+            else:
+                # Formula literals can be the only copy of a personal value.
+                lines.extend(m[1:-1].replace('""', '"') for m in
+                             re.findall(r'"(?:[^"]|"")*"', el.text))
         if full:
             attrs.extend(val for attr in _SHEET_DATA_ATTRS
                          if (val := el.get(attr)) and val.strip())
@@ -406,7 +418,13 @@ def _aux_texts(zf, names, full=False):
     """Testi del workbook FUORI dai fogli: commenti (classici e threaded),
     caselle di testo, grafici e, con full=True, autori/attributi (persons,
     cache pivot, tabelle, connessioni)."""
-    texts = []
+    texts = workbook_surfaces(zf.read("xl/workbook.xml"), full=full)
+    # Reference-bearing parts also include external link caches and chart
+    # formulas. Unsupported references remain visible to the final check.
+    if full:
+        for part in sorted(names):
+            if part.startswith("xl/") and part.endswith(".xml") and part != "xl/workbook.xml":
+                texts.extend(reference_surfaces(ET.fromstring(zf.read(part))))
     for name in sorted(n for n in names if _COMMENTS_RE.match(n)):
         root = ET.fromstring(zf.read(name))
         tags = {"t", "author"} if full else {"t"}
@@ -479,7 +497,7 @@ def _redact_item(elem, usable, text_tags, skip_tags=(), exact=None):
                 _set_text(el, ph if i == 0 else "")
             return {ph: 1}
     matches, claimed = [], []
-    for ph, _val, pat in usable:
+    for ph, _val, pat in patterns(usable, exact, text):
         for m in pat.finditer(text):
             ms, me = m.start(), m.end()
             if any(ms < ce and me > cs for cs, ce in claimed):
@@ -533,7 +551,7 @@ def _redact_attrs(root, usable, allow=None, exact=None):
                     hits[ph] = hits.get(ph, 0) + 1
                     continue
             new = val
-            for ph, _v, pat in usable:
+            for ph, _v, pat in patterns(usable, exact, val):
                 new, k = pat.subn(ph, new)
                 if k:
                     hits[ph] = hits.get(ph, 0) + k
@@ -580,7 +598,7 @@ def _redact_pivot(root, usable, exact=None):
                     changed = touched = True
                     continue
             new = val
-            for ph, _v, pat in usable:
+            for ph, _v, pat in patterns(usable, exact, val):
                 new, k = pat.subn(ph, new)
                 if k:
                     hits[ph] = hits.get(ph, 0) + k
@@ -613,7 +631,7 @@ def _redact_pivot(root, usable, exact=None):
     for el in root.iter():
         if any((val := el.get(attr))
                and ((exact and _norm_value(val) in exact)
-                    or any(pat.search(val) for _ph, _v, pat in usable))
+                    or any(pat.search(val) for _ph, _v, pat in patterns(usable, exact, val)))
                for attr in _PIVOT_STALE_HINTS):
             # in COPPIA: un minValue orfano del suo maxValue (o viceversa)
             # fa rifiutare il file a Excel
@@ -654,7 +672,7 @@ def _redact_sheet(root, sst_hits, usable, exact=None):
         freeze = False
         if f is not None:
             ftxt = f.text or ""
-            if ftxt and any(pat.search(ftxt) for _ph, _v, pat in usable):
+            if ftxt and any(pat.search(ftxt) for _ph, _v, pat in patterns(usable, exact, ftxt)):
                 freeze = True                # PII letterale DENTRO la formula
         t = c.get("t", "n")
         hits = {}
@@ -1019,11 +1037,10 @@ def redact_xlsx(xlsx_bytes, mapping, exact_phs=None, ctl=None, ocr_cache=None):
     poi il resto) e checkpoint di annullamento dentro i loop lunghi.
 
     `exact_phs` = placeholder del percorso tabellare (xlsx_table): i loro
-    valori si sostituiscono per UGUAGLIANZA dell'intera cella (dizionario
-    O(1)), non per pattern. Indispensabile per le prestazioni: una colonna da
-    40k unique come regex significherebbe 40k pattern da provare su ogni
-    stringa del file. Tutti gli altri placeholder usano il matching a
-    sottostringa, per pattern."""
+    valori si cercano prima per uguaglianza dell'intera cella (dizionario
+    O(1)). Un indice seleziona i candidati per le occorrenze dentro testo più
+    lungo e metadati: anche queste vengono redatte, con gli stessi pattern
+    del controllo di uscita, senza provare 40k regex su ogni cella."""
     from .progress import NULL as _NULL_CTL
     ctl = ctl or _NULL_CTL
     if not isinstance(mapping, dict) or not mapping:
@@ -1036,9 +1053,10 @@ def redact_xlsx(xlsx_bytes, mapping, exact_phs=None, ctl=None, ocr_cache=None):
     exact_set = set(exact_phs or ())
 
     skipped, usable = [], []
-    exact = {}                               # valore normalizzato -> placeholder
+    exact = CellValues()                     # whole-cell lookup + embedded index
     for ph, val in items:
-        if ph in exact_set:
+        label = ph.strip("[]").rsplit("_", 1)[0]
+        if ph in exact_set and label not in EXACT_SPAN_LABELS:
             nv = _norm_value(val)
             if nv:
                 # il primo (valore più LUNGO, per l'ordinamento sopra) vince
@@ -1046,17 +1064,30 @@ def redact_xlsx(xlsx_bytes, mapping, exact_phs=None, ctl=None, ocr_cache=None):
             else:
                 skipped.append(ph)
             continue
-        if _too_noisy(val):
+        if _too_noisy(val, ph):
             skipped.append(ph)
             continue
-        pat = _value_pattern(val)
+        pat = _value_pattern(val, ph)
         if pat:
             usable.append((ph, val, pat))
         else:
             skipped.append(ph)
 
+    exact.index = ValueIndex((ph, val) for ph, val in items
+                             if ph in exact_set and not _too_noisy(val, ph))
     zf, names = _open(xlsx_bytes)
-    by_ph = {}
+    parts = {info.filename: zf.read(info.filename) for info in zf.infolist()}
+    name_parts, name_hits = redact_names(parts, ValueIndex(
+        (ph, val) for ph, val in items if ph not in skipped))
+    if name_parts:
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zout:
+            for info in zf.infolist():
+                zout.writestr(info, name_parts.get(info.filename, parts[info.filename]))
+        xlsx_bytes = buf.getvalue()
+        zf.close()
+        zf, names = _open(xlsx_bytes)
+    by_ph = dict(name_hits)
     replaced = {}                            # nome part -> bytes riserializzati
     frozen_total = 0
     sheets = _sheet_parts(zf, names)
@@ -1147,7 +1178,7 @@ def redact_xlsx(xlsx_bytes, mapping, exact_phs=None, ctl=None, ocr_cache=None):
             hits = {}
             _redact_drawing_tree(root, usable, hits)     # a:t con evidenziazione
             for el in root.iter():
-                if el.tag.rsplit("}", 1)[-1] in ("v", "pt") and el.text:
+                if el.tag.rsplit("}", 1)[-1] in ("v", "pt", "t") and el.text:
                     # exact anche qui: le cache dei grafici ripetono le colonne
                     _acc(hits, _redact_node(el, usable, exact=exact))
             # testo alternativo/titolo di immagini e forme: svuotati, non
@@ -1606,7 +1637,7 @@ def _header_only_phs(mapping, labels, hay_values, hay_texts):
         if val not in vals:
             vals = [val, *vals]
         # le superfici senza pattern non si redigono comunque: già innocue
-        pats = [p for p in (_value_pattern(v) for v in vals) if p is not None]
+        pats = [p for p in (_value_pattern(v, ph) for v in vals) if p is not None]
         if not pats:
             continue
         if any(p.search(t) for p in pats for t in hay_texts):
@@ -1890,6 +1921,19 @@ def sheet_names(xlsx_bytes):
     return [sn for _part, sn in _sheet_parts(zf, names) if sn]
 
 
+def sheet_name_aliases(original, protected):
+    """Map displayed protected sheet names to originals for local column actions."""
+    oz, on = _open(original)
+    pz, pn = _open(protected)
+    try:
+        originals = dict(_sheet_parts(oz, on))
+        return {name: originals[part] for part, name in _sheet_parts(pz, pn)
+                if part in originals}
+    finally:
+        oz.close()
+        pz.close()
+
+
 def column_values(xlsx_bytes, sheet_name, col_letter):
     """Valori DISTINTI (per _norm, primo testo che compare) di una colonna di
     un foglio, riga di intestazione esclusa se riconosciuta come tale.
@@ -1975,15 +2019,8 @@ def anonymize_xlsx_column(xlsx_bytes, sheet_name, col_letter, mapping,
             "skipped": skipped}
 
 
-def _verify_residuals(xlsx_bytes, items, exact=None):
-    """Placeholder il cui valore è ANCORA leggibile nell'output: testo
-    completo (full=True copre anche attributi, cache pivot, filtri, autori) +
-    metadati + rels. Deve essere [].
-
-    I valori del percorso tabellare (`exact`) si verificano per UGUAGLIANZA
-    con i segmenti-cella del testo estratto (le righe sono celle unite da
-    " | "): coerente con la loro semantica di sostituzione whole-cell e O(1)
-    a valore — 40k pattern regex su tutto il testo sarebbero ore."""
+def residual_text(xlsx_bytes):
+    """All supported file surfaces, including package metadata and relationships."""
     try:
         text = extract_text(xlsx_bytes, full=True)
     except XlsxError:
@@ -1998,11 +2035,26 @@ def _verify_residuals(xlsx_bytes, items, exact=None):
                 extra.extend(_alt_text_surfaces(ET.fromstring(zf.read(name))))
             except ET.ParseError:
                 continue
-    haystack = text + "\n" + "\n".join(extra)
+    zf.close()
+    return text + "\n" + "\n".join(extra)
+
+
+def _verify_residuals(xlsx_bytes, items, exact=None):
+    """Placeholder il cui valore è ANCORA leggibile nell'output: testo
+    completo (full=True copre anche attributi, cache pivot, filtri, autori) +
+    metadati + rels. Deve essere [].
+
+    Whole-cell table values also use an indexed search for embedded matches.
+    This preserves the same privacy semantics as the final chat guard without
+    testing every column value against every cell. Short values retain their
+    explicit whole-cell checks."""
+    haystack = residual_text(xlsx_bytes)
+    all_items = list(items)
+    if getattr(exact, "index", None) is not None:
+        all_items.extend(exact.index.items)
     residual = []
-    for ph, val in items:
-        pat = _value_pattern(val)
-        if pat and pat.search(haystack):
+    for ph, val, pat in ValueIndex(all_items).candidates(haystack):
+        if pat.search(haystack) or contains_literal(haystack, val, ph):
             residual.append(ph)
     if exact:
         segments = {_norm_value(seg) for line in haystack.split("\n")
@@ -2011,3 +2063,10 @@ def _verify_residuals(xlsx_bytes, items, exact=None):
             if nv in segments:
                 residual.append(ph)
     return residual
+
+
+def known_xlsx_leaks(data, mapping):
+    """Known protected surfaces in the complete workbook, without preview limits."""
+    text = residual_text(data)
+    selected = mapping.for_text(text) if hasattr(mapping, "for_text") else mapping
+    return sorted(set(ValueIndex(selected.items()).matches(text)))

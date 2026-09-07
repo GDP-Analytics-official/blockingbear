@@ -35,6 +35,8 @@ import hashlib
 import ipaddress
 import re
 
+from .text_patterns import normalized_detector
+
 from . import lexicon as _lx
 
 CYBER_LABELS = frozenset({
@@ -57,7 +59,7 @@ _IPV4_RX = re.compile(
 # versione a quattro campi ha la stessa forma di un IPv4. Lo dice la parola prima,
 # anche con una o due parole di raccordo in mezzo ("Nginx è alla versione ...").
 _VERSION_BEFORE_RX = re.compile(
-    r"(?:\b(?:v|ver|vers|version|versione|release|rel|build|firmware|fw|kernel"
+    r"(?:\b(?:v|ver|vers|version|versione|versi[óo]n|versie|release|rel|build|firmware|fw|kernel"
     r"|python|node|java|php|openssl|nginx|apache|chrome|firefox|edge|safari"
     r"|windows|ubuntu|debian|centos|rhel|ios|android|macos|tomcat|mysql|postgres"
     r"|postgresql|docker|kubernetes|k8s|helm|go|golang|rust|ruby|perl|dotnet|jdk"
@@ -109,6 +111,10 @@ def _ipv6_hits(text):
                 continue
         if addr.is_loopback or addr.is_unspecified:
             continue
+        # An invalid prefix is not part of the address. Match the address only,
+        # consistently with IPv4, while keeping the malformed suffix visible.
+        if m.group("pfx") and int(m.group("pfx")) > 128:
+            end = min(end, m.start("pfx") - 1)
         # senza "::" servono tutti e otto i gruppi: "12:30:45" o un MAC a sei
         # gruppi non passano il parser, ma "1:2:3:4:5:6:7:8" sì ed è corretto
         out.append((3, m.start(), end, "IP_ADDRESS", False))
@@ -165,8 +171,9 @@ _LMNT_RX = re.compile(r"(?<![0-9A-Fa-f])[0-9A-Fa-f]{32}:[0-9A-Fa-f]{32}(?![0-9A-
 # hash hex NUDO: solo con la parola chiave che lo dichiara hash di password
 _KW_HASH_RX = re.compile(
     r"(?<![\w\-])(?:(?:nt|lm|ntlm|net-?ntlmv?2|md5|sha-?1|sha-?256|sha-?512|password|pwd|pass"
-    r"|passwd)[ _\-]?hash|hash[ _\-]?(?:nt|lm|ntlm|md5|sha-?1|sha-?256|sha-?512)"
-    r"|hash[ _\-]?(?:della|of the|of)?[ _\-]?password|ntlm|nthash|lmhash)"
+    r"|passwd|passwort|wachtwoord|contrase[ñn]a|mot[ _-]de[ _-]passe)[ _\-]?hash|hash[ _\-]?(?:nt|lm|ntlm|md5|sha-?1|sha-?256|sha-?512)"
+    r"|hash[ _\-]*(?:(?:della|of the|of|du|de la|des|van het)[ _\-]+)?"
+    r"(?:password|passwort|wachtwoord|contrase[ñn]a|mot[ _-]de[ _-]passe)|ntlm|nthash|lmhash)"
     r"[^\n]{0,20}?[:=]?[ \t]*[\"'`]?"
     r"(?P<val>(?<![0-9A-Fa-f])(?:[0-9A-Fa-f]{32}|[0-9A-Fa-f]{40}|[0-9A-Fa-f]{64}|[0-9A-Fa-f]{128})(?![0-9A-Za-z]))",
     re.IGNORECASE)
@@ -533,6 +540,7 @@ def _resolve(hits):
     return sorted(kept, key=lambda h: h[1])
 
 
+@normalized_detector
 def detect_cyber(text):
     """Entità delle dieci label, nella forma di `detect_regex`."""
     if not text:

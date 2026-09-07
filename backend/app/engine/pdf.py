@@ -81,7 +81,7 @@ def _value_boxes(pdf_bytes, mapping):
     for ph, val in sorted(mapping.items(), key=lambda kv: -len(kv[1])):
         if pdf_export._too_noisy(val):
             continue
-        pat = pdf_export._value_pattern(val)
+        pat = pdf_export._value_pattern(val, ph)
         if pat:
             items.append((ph, pat))
     boxes = {}

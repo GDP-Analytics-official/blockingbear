@@ -43,6 +43,8 @@ senza contendersi la span con CREDITCARDNUMBER.
 
 import re
 
+from .text_patterns import normalized_detector
+
 from . import lexicon as _lx
 
 DEVICE_LABELS = frozenset({"HOSTNAME", "DEVICE_ID"})
@@ -431,6 +433,7 @@ def _propagate(text, hits):
     return out
 
 
+@normalized_detector
 def detect_devices(text):
     """Entità HOSTNAME e DEVICE_ID, nella forma di `detect_regex`."""
     if not text:

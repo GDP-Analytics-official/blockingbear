@@ -96,7 +96,7 @@ export default function UsersPage() {
 
   return (
     <main className="min-w-0 flex-1 overflow-y-auto">
-      <div className="mx-auto flex w-full max-w-2xl flex-col gap-5 p-6">
+      <div className="mx-auto flex w-full page-content max-w-2xl flex-col gap-5">
         <header className="flex items-baseline gap-2.5">
           <h1 className="text-xl font-semibold tracking-tight">{t('title')}</h1>
           {users.length > 0 && <Badge variant="secondary">{users.length}</Badge>}
@@ -109,7 +109,7 @@ export default function UsersPage() {
         )}
 
         <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
-          <Table>
+          <Table className="mobile-card-table">
             <TableHeader>
               <TableRow className="hover:bg-transparent">
                 <TableHead>{t('table.user')}</TableHead>
@@ -121,7 +121,7 @@ export default function UsersPage() {
             <TableBody>
               {users.map((u) => (
                 <TableRow key={u.id}>
-                  <TableCell className="font-medium">
+                  <TableCell className="font-medium [overflow-wrap:anywhere]">
                     {u.username}
                     {/* sparisce da solo: il flag cade al primo cambio password */}
                     {u.must_change_password && (
@@ -188,7 +188,7 @@ export default function UsersPage() {
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Input placeholder={t('form.limit')} type="number" min="0"
-                   step="0.01" value={form.limit} className="min-w-56 flex-1" inputMode="decimal"
+                   step="0.01" value={form.limit} className="min-w-0 w-full sm:min-w-56 flex-1" inputMode="decimal"
                    aria-label={t('form.limitAria')}
                    onChange={(e) => setForm({ ...form, limit: e.target.value })} />
             <select

@@ -31,6 +31,8 @@ HERE = Path(__file__).resolve().parents[1]        # backend/
 sys.path.insert(0, str(HERE))
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
 
+from app.engine.credentials import CREDENTIAL_LABELS
+from app.engine.cyber import CYBER_LABELS
 from app.engine import core                                       # noqa: E402
 from app.engine.devices import (DEVICE_LABELS, IMEI_RBI, detect_devices,  # noqa: E402
                                 is_device_number)
@@ -288,7 +290,7 @@ def main():
     check(DEVICE_LABELS == {H, D}, "DEVICE_LABELS")
     check(not (DEVICE_LABELS & EXACT_SPAN_LABELS), "HOSTNAME e DEVICE_ID NON sono a span esatta")
     check(not (DEVICE_LABELS & SOFT_REGEX_LABELS), "HOSTNAME e DEVICE_ID non sono soft")
-    check(TAG_GROUPS["cyber"] == sorted(EXACT_SPAN_LABELS | DEVICE_LABELS), f"gruppo cyber: {TAG_GROUPS}")
+    check(TAG_GROUPS["cyber"] == sorted(CREDENTIAL_LABELS | CYBER_LABELS | DEVICE_LABELS), f"gruppo cyber: {TAG_GROUPS}")
 
     print("[D] fusione e post-check")
     def merged(text, model=()):

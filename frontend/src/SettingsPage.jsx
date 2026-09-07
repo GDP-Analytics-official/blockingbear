@@ -153,7 +153,7 @@ function AnonDefaults({ onSaved }) {
       <div className="flex flex-col gap-1.5 rounded-md border border-border bg-muted/20 p-3">
         <Label htmlFor="chat-anonymization-policy">{t('anonDefaults.policy')}</Label>
         <select id="chat-anonymization-policy"
-                className="h-9 w-56 rounded-md border border-input bg-card px-3 text-sm"
+                className="h-9 w-full sm:w-56 rounded-md border border-input bg-card px-3 text-sm"
                 value={draft.chat_anonymization_policy || 'optional'}
                 onChange={(e) => setDraft({
                   ...draft, chat_anonymization_policy: e.target.value,
@@ -501,24 +501,24 @@ export default function SettingsPage() {
   if (!isAdmin) {
     return (
       <main className="min-w-0 flex-1 overflow-y-auto">
-        <div className="mx-auto flex w-full max-w-2xl flex-col gap-5 p-6">
+        <div className="mx-auto flex w-full page-content max-w-2xl flex-col gap-5">
           <header>
             <h1 className="text-xl font-semibold tracking-tight">{t('title')}</h1>
             <p className="mt-1 text-sm text-muted-foreground">{t('introUser')}</p>
           </header>
-          <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
+          <div className="rounded-xl border border-border bg-card p-4 sm:p-6 shadow-sm">
             <LanguagePreference />
           </div>
-          <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
+          <div className="rounded-xl border border-border bg-card p-4 sm:p-6 shadow-sm">
             <ChangePassword />
           </div>
-          <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
+          <div className="rounded-xl border border-border bg-card p-4 sm:p-6 shadow-sm">
             <DefaultModel isAdmin={false} catalog={catalog} />
           </div>
-          <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
+          <div className="rounded-xl border border-border bg-card p-4 sm:p-6 shadow-sm">
             <MyAnonTerms />
           </div>
-          <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
+          <div className="rounded-xl border border-border bg-card p-4 sm:p-6 shadow-sm">
             <TutorialPreference />
           </div>
         </div>
@@ -565,7 +565,7 @@ export default function SettingsPage() {
 
   return (
     <main className="min-w-0 flex-1 overflow-y-auto">
-      <div className="mx-auto flex w-full max-w-2xl flex-col gap-5 p-6">
+      <div className="mx-auto flex w-full page-content max-w-2xl flex-col gap-5">
         <header>
           <h1 className="text-xl font-semibold tracking-tight">{t('title')}</h1>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -574,7 +574,7 @@ export default function SettingsPage() {
         </header>
 
         <form onSubmit={save}
-              className="flex flex-col gap-6 rounded-xl border border-border bg-card p-6 shadow-sm">
+              className="flex flex-col gap-6 rounded-xl border border-border bg-card p-4 sm:p-6 shadow-sm">
           {sections.map((sec) => (
             <section key={sec} className="flex flex-col gap-4">
               {/* il backend manda la CHIAVE del gruppo; se il catalogo non la
@@ -630,15 +630,15 @@ export default function SettingsPage() {
           </div>
         </form>
 
-        <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
+        <div className="rounded-xl border border-border bg-card p-4 sm:p-6 shadow-sm">
           <LanguagePreference />
         </div>
 
-        <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
+        <div className="rounded-xl border border-border bg-card p-4 sm:p-6 shadow-sm">
           <ChangePassword />
         </div>
 
-        <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
+        <div className="rounded-xl border border-border bg-card p-4 sm:p-6 shadow-sm">
           {/* la deroga ZDR come SALVATA (non la bozza della casella qui sopra):
               il selettore deve nascondere quello che il server rifiuterebbe
               oggi, e finché non si salva rifiuta ancora */}
@@ -648,21 +648,21 @@ export default function SettingsPage() {
                         onSaved={() => setAccessRefresh((n) => n + 1)} />
         </div>
 
-        <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
+        <div className="rounded-xl border border-border bg-card p-4 sm:p-6 shadow-sm">
           <ModelAccess models={catalog.models} refreshKey={accessRefresh}
                        allowNonZdr={Number(settings.find(
                          (s) => s.key === 'chat_allow_non_zdr')?.value) === 1} />
         </div>
 
-        <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
+        <div className="rounded-xl border border-border bg-card p-4 sm:p-6 shadow-sm">
           <AnonDefaults onSaved={setGlobalTerms} />
         </div>
 
-        <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
+        <div className="rounded-xl border border-border bg-card p-4 sm:p-6 shadow-sm">
           <MyAnonTerms globals={globalTerms} />
         </div>
 
-        <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
+        <div className="rounded-xl border border-border bg-card p-4 sm:p-6 shadow-sm">
           <TutorialPreference />
         </div>
       </div>

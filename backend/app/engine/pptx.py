@@ -53,6 +53,7 @@ from .docx import (_alt_text_surfaces, _meta_surfaces, _part_namespaces,
                    _RelsValues, _scrub_alt_text, _scrub_app_props,
                    _scrub_core_props, _scrub_rels, _serialize_part)
 from .pdf_export import _too_noisy, _value_pattern
+from .text_patterns import contains_literal
 
 A_NS = "http://schemas.openxmlformats.org/drawingml/2006/main"
 P_NS = "http://schemas.openxmlformats.org/presentationml/2006/main"
@@ -305,10 +306,10 @@ def redact_pptx(pptx_bytes, mapping, ocr_cache=None):
 
     skipped, usable = [], []
     for ph, val in items:
-        if _too_noisy(val):
+        if _too_noisy(val, ph):
             skipped.append(ph)
             continue
-        pat = _value_pattern(val)
+        pat = _value_pattern(val, ph)
         if pat:
             usable.append((ph, val, pat))
         else:
@@ -462,7 +463,7 @@ def _verify_residuals(pptx_bytes, items):
     haystack = text + "\n" + "\n".join(extra)
     residual = []
     for ph, val in items:
-        pat = _value_pattern(val)
-        if pat and pat.search(haystack):
+        pat = _value_pattern(val, ph)
+        if (pat and pat.search(haystack)) or contains_literal(haystack, val, ph):
             residual.append(ph)
     return residual

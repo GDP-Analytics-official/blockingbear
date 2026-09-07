@@ -639,17 +639,17 @@ export function jobEvents(jobId, onUpdate) {
 // preparazione): senza questo, dal secondo messaggio in poi il browser
 // riproporrebbe le pagine del primo. La richiesta non passa mai dalla cache,
 // quindi non conta nemmeno quello che il browser si è già tenuto da parte.
-export async function fetchStagedPagePng(convId, itemId, source, n, rev = 0) {
+export async function fetchStagedPagePng(convId, itemId, source, n, rev = 0, signal) {
   const res = await request(
     `/api/chats/${convId}/staged/${itemId}/pages/${source}/${n}.png?rev=${rev}`,
-    { cache: 'no-store' })
+    { cache: 'no-store', signal })
   return URL.createObjectURL(await res.blob())
 }
 
 // Pagine PNG della preview di un file di progetto (stesso meccanismo).
-export async function fetchProjectPagePng(projectId, fileId, source, n, rev = 0) {
+export async function fetchProjectPagePng(projectId, fileId, source, n, rev = 0, signal) {
   const res = await request(
-    `/api/projects/${projectId}/files/${fileId}/pages/${source}/${n}.png?rev=${rev}`)
+    `/api/projects/${projectId}/files/${fileId}/pages/${source}/${n}.png?rev=${rev}`, { signal })
   return URL.createObjectURL(await res.blob())
 }
 

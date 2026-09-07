@@ -1426,6 +1426,21 @@ def _egress_check(session, conv_id, model_content, attachments, exclude=None):
             raise chat_anon.TurnAnonymizationError(
                 f"Controllo di uscita fallito: {att.display_filename or att.filename} "
                 "risulta protetto ma punta all'originale.", att.id)
+        path = Path(att.protected_path)
+        if path.suffix.lower() == ".xlsx":
+            from ..engine.xlsx import known_xlsx_leaks
+            mapping = chat_anon.conversation_mapping(
+                session, conv_id, include_aliases=True, exclude=exclude)
+            try:
+                file_leaks = known_xlsx_leaks(path.read_bytes(), mapping)
+            except Exception as exc:
+                raise chat_anon.TurnAnonymizationError(
+                    "Cannot verify the complete Excel workbook; nothing was sent.",
+                    att.id) from exc
+            if file_leaks:
+                raise chat_anon.TurnAnonymizationError(
+                    "Excel output check failed: the workbook still contains "
+                    f"{_leak_list(file_leaks)}. Nothing was sent.", att.id)
         card = chat_anon.attachment_model_briefing(att)
         leaks = chat_anon.known_surface_leaks(
             session, conv_id, json.dumps(card or {}, ensure_ascii=False),

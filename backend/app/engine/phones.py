@@ -56,6 +56,9 @@ NO_TRUNK_ZERO = frozenset({"ES", "US"})
 # serve solo a non farle scandire tutto il testo per ogni regione.
 _HSP = r"[ \t\u00a0\u202f]"
 _CAND = re.compile(r"(?<![\w+])(?:\+" + _HSP + r"?|00)?\(?\d(?:[ \t\u00a0\u202f.\-/()]{0,2}\d){6,17}\)?(?![\w])")
+_EXTENSION = re.compile(
+    r"[ \t\u00a0\u202f]*(?:ext(?:ension)?|x|interno|poste|durchwahl|anexo|toestel)"
+    r"[ \t\u00a0\u202f.:]*[0-9]{1,10}(?![\w])", re.I)
 _CUE_RX = re.compile(r"(?<![\w])(?:" + _lx.alt(_lx.PHONE_CUE) + r")\.?(?:" + _HSP
                      + r"+[^\W\d_]{1,3}(?![^\W\d_])){0,2}"
                      r"[ \t\u00a0\u202f:.\-]*(?:n(?:o|r|um|umero|°|º)?\.?)?[ \t\u00a0\u202f:.\-]*$",
@@ -112,6 +115,9 @@ def detect_phones(text, blocked=()):
                     continue
                 if not (written_as_phone(text[s:e], region) or has_phone_cue(text, s)):
                     continue
+                extension = _EXTENSION.match(text, e)
+                if extension and not _blocked(e, extension.end(), blocked):
+                    e = extension.end()
                 spans.add((s, e))
     # lo stesso numero letto da più regioni, o con confini diversi: la più lunga
     out = []

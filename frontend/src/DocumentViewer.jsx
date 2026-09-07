@@ -1,5 +1,11 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react'
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Trans, useTranslation } from 'react-i18next'
+import { useMediaQuery } from '@/lib/useMediaQuery'
+import { hasFixedLayout, pairFixedBoxes, readPagePosition, restorePagePosition } from '@/lib/previewLayout'
+import { loadPreviewPage } from '@/lib/previewRequests'
+import { usePreviewVisibility } from '@/lib/usePreviewVisibility'
 
 // I formati in cui la preview coincide geometricamente col file esportato:
 // solo qui si può SIGILLARE un'area (il rettangolo nero che rimuove davvero
@@ -141,7 +147,7 @@ function anchorScroll(src, dst, anchors, reverse) {
 function Page({ docId, source, n, size, boxes, rev, tooltipFor, highlight,
                 mapping, onDeanonymize, onAnonymizeText, columns,
                 onColumnAction, services, sealMode, nPages, onSealArea,
-                onRemoveSeal, onReprocessOcr, hotKeys, onHot }) {
+                onRemoveSeal, onReprocessOcr, hotKeys, onHot, touchSelect, zoom = 100, visible = true }) {
   const [url, setUrl] = useState(null)
   const [err, setErr] = useState('')
   const [sel, setSel] = useState(null)          // {x0,y0,x1,y1} frazioni 0..1
@@ -150,21 +156,33 @@ function Page({ docId, source, n, size, boxes, rev, tooltipFor, highlight,
   // busy} -> + {info} | {error} quando column-info risponde
   const [colPop, setColPop] = useState(null)
   const pageRef = useRef(null)
+  const nearby = usePreviewVisibility(pageRef, visible)
   const dragRef = useRef(null)
+  const dragCleanup = useRef(null)
+  const [activeBox, setActiveBox] = useState(null)
+  useEffect(() => () => dragCleanup.current?.(), [])
   const { t } = useTranslation('viewer')
 
   useEffect(() => {
     let alive = true
     let objUrl = null
-    services.fetchPagePng(docId, source, n, rev)
+    setUrl(null)
+    setErr('')
+    if (!nearby || !visible) return undefined
+    const controller = new AbortController()
+    loadPreviewPage((signal) => services.fetchPagePng(docId, source, n, rev, signal), controller.signal)
       .then((u) => { objUrl = u; if (alive) setUrl(u); else URL.revokeObjectURL(u) })
       .catch((e) => alive && setErr(e.status === 410
         ? t('page.originalGone') : e.message))
-    return () => { alive = false; if (objUrl) URL.revokeObjectURL(objUrl) }
-  }, [docId, source, n, rev])   // eslint-disable-line react-hooks/exhaustive-deps
+    return () => {
+      alive = false
+      controller.abort()
+      if (objUrl) URL.revokeObjectURL(objUrl)
+    }
+  }, [docId, source, n, rev, nearby, visible])   // eslint-disable-line react-hooks/exhaustive-deps
 
   // il documento è cambiato (ri-redazione): via selezione e popover pendenti
-  useEffect(() => { setSel(null); setSelInfo(null); setColPop(null) }, [rev])
+  useEffect(() => { setSel(null); setSelInfo(null); setColPop(null); setActiveBox(null) }, [rev])
 
   function relPoint(e) {
     const r = pageRef.current.getBoundingClientRect()
@@ -190,11 +208,16 @@ function Page({ docId, source, n, size, boxes, rev, tooltipFor, highlight,
     }
   }
 
-  function onMouseDown(e) {
-    if (e.button !== 0 || !url) return
+  function onPointerDown(e) {
+    if (e.button !== 0 || !e.isPrimary || !url || err) return
+    if (e.pointerType === 'touch' && !touchSelect) return
     if (e.target.closest('.box') || e.target.closest('.selpop') ||
         e.target.closest('.colstrip') || e.target.closest('.colpop')) return
     e.preventDefault()
+    dragCleanup.current?.()
+    const pointerId = e.pointerId
+    e.currentTarget.setPointerCapture(pointerId)
+    setActiveBox(null)
     const start = relPoint(e)
     dragRef.current = { start, moved: false }
     setSel(null)
@@ -205,6 +228,7 @@ function Page({ docId, source, n, size, boxes, rev, tooltipFor, highlight,
       x1: Math.max(start.x, p.x), y1: Math.max(start.y, p.y),
     })
     const move = (ev) => {
+      if (ev.pointerId !== pointerId) return
       const d = dragRef.current
       if (!d) return
       const p = relPoint(ev)
@@ -212,8 +236,8 @@ function Page({ docId, source, n, size, boxes, rev, tooltipFor, highlight,
       if (d.moved) setSel(rect(p))
     }
     const up = async (ev) => {
-      window.removeEventListener('mousemove', move)
-      window.removeEventListener('mouseup', up)
+      if (ev.pointerId !== pointerId) return
+      dragCleanup.current?.()
       const d = dragRef.current
       dragRef.current = null
       if (!d?.moved) { setSel(null); return }
@@ -246,23 +270,49 @@ function Page({ docId, source, n, size, boxes, rev, tooltipFor, highlight,
         setSelInfo({ error: e2.message })
       }
     }
-    window.addEventListener('mousemove', move)
-    window.addEventListener('mouseup', up)
+    const cancel = () => {
+      dragRef.current = null
+      setSel(null)
+      setSelInfo(null)
+      dragCleanup.current?.()
+    }
+    dragCleanup.current = () => {
+      window.removeEventListener('pointermove', move)
+      window.removeEventListener('pointerup', up)
+      window.removeEventListener('pointercancel', cancel)
+      dragCleanup.current = null
+    }
+    window.addEventListener('pointermove', move)
+    window.addEventListener('pointerup', up)
+    window.addEventListener('pointercancel', cancel)
   }
 
-  if (err) return <div className="page-missing">{err}</div>
   const pct = (v, tot) => `${(v / tot) * 100}%`
   const fr = (v) => `${v * 100}%`
   return (
-    <div className="page" ref={pageRef} onMouseDown={onMouseDown}>
-      {url ? <img src={url} alt={t('page.alt', { n: n + 1 })} draggable={false} />
-           : <div className="page-loading" />}
-      {url && (boxes || []).map((b, i) => (
+    <div className={'page' + (touchSelect ? ' page-select' : '')} ref={pageRef}
+         data-page-index={n} data-source={source}
+         style={{ width: `${zoom}%`, aspectRatio: `${size.width} / ${size.height}` }} onPointerDown={onPointerDown}
+         onClick={(e) => { if (!e.target.closest('.box')) setActiveBox(null) }}>
+      {err ? <div className="page-missing" role="status">{err}</div>
+           : url ? <img src={url} alt={t('page.alt', { n: n + 1 })} draggable={false}
+                        onError={() => setErr(t('page.loadError'))} />
+                 : <div className="page-loading" />}
+      {url && !err && (boxes || []).map((b, i) => (
         <div
           key={i}
           className={'box' + (b.sealed ? ' box-sealed'
                      : highlight ? ' box-yellow' : ' box-outline')
-                     + (hotKeys?.has(`${n}:${i}`) ? ' box-twin' : '')}
+                     + (hotKeys?.has(`${n}:${i}`) ? ' box-twin' : '')
+                     + (activeBox === i ? ' box-active' : '')}
+          tabIndex={0} role="button" aria-label={tooltipFor(b)}
+          aria-expanded={activeBox === i}
+          onClick={(e) => { if (!e.target.closest('.boxpop')) setActiveBox((v) => v === i ? null : i) }}
+          onKeyDown={(e) => {
+            if (e.target !== e.currentTarget) return
+            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setActiveBox((v) => v === i ? null : i) }
+            if (e.key === 'Escape') setActiveBox(null)
+          }}
           onMouseEnter={() => onHot?.({ side: source, key: `${n}:${i}` })}
           onMouseLeave={() => onHot?.(null)}
           style={{
@@ -273,8 +323,9 @@ function Page({ docId, source, n, size, boxes, rev, tooltipFor, highlight,
           }}
           title={(onDeanonymize || b.sealed) ? undefined : tooltipFor(b)}
         >
+          {!onDeanonymize && !b.sealed && <div className="boxpop">{tooltipFor(b)}</div>}
           {b.sealed ? (onRemoveSeal && (
-            <div className="boxpop" onMouseDown={(e) => e.stopPropagation()}>
+            <div className="boxpop" style={b.x0 / size.width > 0.5 ? { left: 'auto', right: 0 } : undefined} onPointerDown={(e) => e.stopPropagation()}>
               <div className="boxpop-map">
                 <b>{t('box.sealed')}</b>
                 <div className="boxpop-ocr">{t('box.sealedHelp')}</div>
@@ -287,7 +338,7 @@ function Page({ docId, source, n, size, boxes, rev, tooltipFor, highlight,
               </div>
             </div>
           )) : onDeanonymize && (
-            <div className="boxpop" onMouseDown={(e) => e.stopPropagation()}>
+            <div className="boxpop" style={b.x0 / size.width > 0.5 ? { left: 'auto', right: 0 } : undefined} onPointerDown={(e) => e.stopPropagation()}>
               <div className="boxpop-map">
                 <code>{b.ph}</code> = {mapping?.[b.ph] ?? '?'}
                 {b.ocr && <div className="boxpop-ocr">{t('box.ocr')}</div>}
@@ -306,7 +357,7 @@ function Page({ docId, source, n, size, boxes, rev, tooltipFor, highlight,
           )}
         </div>
       ))}
-      {url && columns && onColumnAction && columns.cols.map((c) => (
+      {url && !err && columns && onColumnAction && columns.cols.map((c) => (
         <div key={c.col}
              className={'colstrip' + (colPop?.col === c.col ? ' on' : '')}
              style={{
@@ -316,7 +367,7 @@ function Page({ docId, source, n, size, boxes, rev, tooltipFor, highlight,
                height: pct(c.y1 - c.y0, size.height),
              }}
              title={t('column.stripTitle', { col: c.col, sheet: columns.sheet })}
-             onMouseDown={(e) => e.stopPropagation()}
+             onPointerDown={(e) => e.stopPropagation()}
              onClick={() => openColPop(c)} />
       ))}
       {colPop && (
@@ -327,7 +378,7 @@ function Page({ docId, source, n, size, boxes, rev, tooltipFor, highlight,
                // non farsi tagliare dallo scroll della colonna
                ...(colPop.x > 0.65 ? { right: fr(1 - colPop.x) } : { left: fr(colPop.x) }),
              }}
-             onMouseDown={(e) => e.stopPropagation()}>
+             onPointerDown={(e) => e.stopPropagation()}>
           <div className="colpop-title">
             <b>{t('column.popTitle', { col: colPop.col })}</b> — {colPop.sheet}
             {colPop.info?.header
@@ -381,7 +432,7 @@ function Page({ docId, source, n, size, boxes, rev, tooltipFor, highlight,
       )}
       {sel && selInfo && (
         <div className="selpop" style={{ left: fr(sel.x0), top: fr(sel.y1) }}
-             onMouseDown={(e) => e.stopPropagation()}>
+             onPointerDown={(e) => e.stopPropagation()}>
           {selInfo.busy && (
             <span className="muted">
               <span className="spinner" />{t('selection.extracting')}
@@ -508,22 +559,19 @@ function Page({ docId, source, n, size, boxes, rev, tooltipFor, highlight,
    dei modali esistenti, chiusura con click fuori o Esc. */
 function ConfirmDialog({ title, children, confirmLabel, onConfirm, onCancel }) {
   const { t } = useTranslation('common')
-  useEffect(() => {
-    const onKey = (e) => { if (e.key === 'Escape') onCancel() }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [onCancel])
+  const opener = useRef(document.activeElement)
   return (
-    <div className="modal-back" onMouseDown={onCancel}>
-      <div className="modal confirm-modal" onMouseDown={(e) => e.stopPropagation()}>
-        <h3>{title}</h3>
+    <Dialog open onOpenChange={(open) => { if (!open) onCancel() }}>
+      <DialogContent hideClose aria-describedby={undefined} className="max-w-md"
+                     onCloseAutoFocus={(e) => { e.preventDefault(); opener.current?.focus() }}>
+        <DialogTitle>{title}</DialogTitle>
         <div className="confirm-body">{children}</div>
         <div className="confirm-actions">
-          <button className="ghost" onClick={onCancel}>{t('actions.cancel')}</button>
-          <button className="danger" autoFocus onClick={onConfirm}>{confirmLabel}</button>
+          <Button variant="outline" onClick={onCancel}>{t('actions.cancel')}</Button>
+          <Button variant="destructive" onClick={onConfirm}>{confirmLabel}</Button>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   )
 }
 
@@ -575,6 +623,9 @@ export function docWarnings(doc, t) {
 export default function DocumentViewer({ doc, onChange, onJobStart,
                                          services, tab: tabProp }) {
   const [tabState, setTab] = useState('preview')
+  const [mobileSide, setMobileSide] = useState('original')
+  const [touchSelect, setTouchSelect] = useState(false)
+  const [zoom, setZoom] = useState(100)
   const tab = tabProp ?? tabState
   const [applying, setApplying] = useState(false)
   const [editErr, setEditErr] = useState('')
@@ -584,7 +635,13 @@ export default function DocumentViewer({ doc, onChange, onJobStart,
   const [colLayout, setColLayout] = useState(null)
   const leftRef = useRef(null)
   const rightRef = useRef(null)
+  const pairedRef = useRef(null)
+  const pagePosition = useRef(null)
+  const pageViewport = useRef(null)
   const syncing = useRef(false)
+  const desktop = useMediaQuery('(min-width: 1024px)')
+  const fixedLayout = hasFixedLayout(doc)
+  const paired = desktop && fixedLayout
   // box sotto il mouse: {side: 'original'|'anonymized', key: 'pagina:indice'}
   const [hot, setHot] = useState(null)
   // `ext` (quando c'è) è l'estensione EFFETTIVA, post-conversione: un .xls
@@ -604,6 +661,7 @@ export default function DocumentViewer({ doc, onChange, onJobStart,
   useEffect(() => {
     setTab('preview'); setEditErr(''); setConfirm(null); setSealMode(false)
     setEmptyNoteClosed(false); setHot(null)
+    setMobileSide('original'); setTouchSelect(false); setZoom(100)
   }, [doc.id])
 
   useEffect(() => {
@@ -618,17 +676,19 @@ export default function DocumentViewer({ doc, onChange, onJobStart,
   // scroll sincronizzato tra le due colonne, per ancore (vedi pairAnchors):
   // `reverse` quando a guidare è il lato anonimizzato
   const anchors = useMemo(
-    () => pairAnchors(doc.original_boxes, doc.anonymized_boxes,
-                      doc.page_sizes.original, doc.page_sizes.anonymized),
-    [doc.original_boxes, doc.anonymized_boxes, doc.page_sizes])
+    () => fixedLayout
+      ? pairFixedBoxes(doc.original_boxes, doc.anonymized_boxes, doc.page_sizes.original)
+      : pairAnchors(doc.original_boxes, doc.anonymized_boxes,
+                    doc.page_sizes.original, doc.page_sizes.anonymized),
+    [doc.original_boxes, doc.anonymized_boxes, doc.page_sizes, fixedLayout])
   // gemelli di ogni box: per lato, chiave del box -> chiavi dei box
   // corrispondenti sull'altro lato (di solito uno; più d'uno se il valore
   // era spezzato su due righe)
   const twins = useMemo(() => {
     const m = { original: new Map(), anonymized: new Map() }
     for (const { o, a } of anchors) {
-      o.keys.forEach((k) => m.original.set(k, a.keys))
-      a.keys.forEach((k) => m.anonymized.set(k, o.keys))
+      o.keys.forEach((k) => m.original.set(k, [...(m.original.get(k) || []), ...a.keys]))
+      a.keys.forEach((k) => m.anonymized.set(k, [...(m.anonymized.get(k) || []), ...o.keys]))
     }
     return m
   }, [anchors])
@@ -641,8 +701,46 @@ export default function DocumentViewer({ doc, onChange, onJobStart,
     return keys ? { ...none, [other]: new Set(keys) } : none
   }, [hot, twins])
 
+  function rememberPosition(container, resized = false) {
+    const previous = pageViewport.current
+    // A resize can clamp scrollTop and emit scroll before ResizeObserver
+    // restores our reading position. Do not mistake that for user scrolling.
+    if (!resized && previous && pagePosition.current?.docId === doc.id
+        && (previous.container !== container || previous.width !== container?.clientWidth
+          || previous.height !== container?.clientHeight)) return
+    const position = readPagePosition(container)
+    if (position) {
+      pagePosition.current = { docId: doc.id, ...position }
+      pageViewport.current = { container, width: container.clientWidth, height: container.clientHeight }
+    }
+  }
+
+  // Fixed documents share one desktop scroll surface. Keep the same document
+  // position when its width changes or the mobile single-pane layout takes over.
+  useLayoutEffect(() => {
+    if (!fixedLayout || tab !== 'preview') return undefined
+    const container = paired ? pairedRef.current
+      : mobileSide === 'original' ? leftRef.current : rightRef.current
+    if (!container) return undefined
+    const restore = () => {
+      if (pagePosition.current?.docId === doc.id) {
+        restorePagePosition(container, pagePosition.current)
+      }
+      rememberPosition(container, true)
+    }
+    restore()
+    const observer = new ResizeObserver(restore)
+    observer.observe(container)
+    return () => observer.disconnect()
+  }, [doc.id, doc.rev, fixedLayout, paired, mobileSide, tab, zoom])
+
   function onScroll(src, dst, reverse) {
-    if (syncing.current || !src.current || !dst.current) return
+    if (fixedLayout) {
+      rememberPosition(src.current)
+      return
+    }
+    if (syncing.current || !src.current || !dst.current
+        || !src.current.clientWidth || !dst.current.clientWidth) return
     syncing.current = true
     dst.current.scrollTop = anchorScroll(src.current, dst.current, anchors, reverse)
     requestAnimationFrame(() => { syncing.current = false })
@@ -789,8 +887,49 @@ export default function DocumentViewer({ doc, onChange, onJobStart,
     && !doc.sealed?.length && !doc.report?.skipped?.length
   const warn = docWarnings(doc, t)
 
+  function renderPage(source, n) {
+    const original = source === 'original'
+    return (
+      <Page key={n} touchSelect={touchSelect} zoom={paired ? 100 : zoom}
+            visible={desktop || mobileSide === source}
+            docId={doc.id} source={source} n={n} rev={doc.rev || 0}
+            size={(original ? sizesO : sizesA)[n]}
+            boxes={(original ? doc.original_boxes : doc.anonymized_boxes)[n]}
+            highlight={original} mapping={doc.mapping} services={services}
+            tooltipFor={(b) => (b.sealed ? t('box.sealed')
+              : original ? t('box.tooltipOriginal', { placeholder: b.ph })
+              : t('box.tooltipAnon', { placeholder: b.ph, value: doc.mapping[b.ph] ?? '?' }))
+              + (b.ocr ? t('box.ocrSuffix') : '')}
+            columns={colLayout?.[source]?.[n]} onColumnAction={columnAction}
+            onAnonymizeText={anonymizeText} onReprocessOcr={reprocessOcr}
+            onDeanonymize={original ? undefined : deanonymize}
+            hotKeys={hotTwins[source]} onHot={setHot}
+            sealMode={!original && canSeal && sealMode} nPages={sizesA.length}
+            onSealArea={!original && canSeal ? sealArea : undefined}
+            onRemoveSeal={!original && canSeal ? removeSeal : undefined} />
+    )
+  }
+
+  function renderTitle(source) {
+    const original = source === 'original'
+    return (
+      <h3>{t(original ? 'pane.original' : 'pane.anonymized')}{' '}
+        <span className="pane-hint">
+          {t(original ? 'pane.originalHint' : sealMode ? 'pane.sealHint' : 'pane.anonymizedHint')}
+        </span>
+        {!original && canSeal && (
+          <button className={'sealtoggle' + (sealMode ? ' on' : '')}
+                  title={t('pane.sealToggleHint')}
+                  onClick={() => { setSealMode((m) => !m); setTouchSelect(true) }}>
+            {t(sealMode ? 'pane.sealToggleOn' : 'pane.sealToggle')}
+          </button>
+        )}
+      </h3>
+    )
+  }
+
   return (
-    <div className="viewer">
+    <div className="viewer" data-mobile-side={mobileSide} data-fixed-layout={fixedLayout}>
       {tabProp == null && (
         <div className="viewer-head">
           <div className="viewer-actions">
@@ -819,7 +958,34 @@ export default function DocumentViewer({ doc, onChange, onJobStart,
       {editErr && <div className="error">{editErr}</div>}
 
       {tab === 'preview' && (
-        <div className={'compare' + (applying ? ' applying' : '')}>
+        <div className="viewer-mobile-tools">
+          <div className="tabs" aria-label={t('tab.compare')}>
+            <button type="button" className={mobileSide === 'original' ? 'on' : ''}
+                    aria-pressed={mobileSide === 'original'} onClick={() => setMobileSide('original')}>
+              {t('pane.original')}
+            </button>
+            <button type="button" className={mobileSide === 'anonymized' ? 'on' : ''}
+                    aria-pressed={mobileSide === 'anonymized'} onClick={() => setMobileSide('anonymized')}>
+              {t('pane.anonymized')}
+            </button>
+          </div>
+          <div className="viewer-touch-tools">
+            <button type="button" className={touchSelect ? 'primary' : 'ghost'}
+                    aria-pressed={touchSelect} onClick={() => setTouchSelect((v) => !v)}>
+              {t(touchSelect ? 'mobile.selecting' : 'mobile.select')}
+            </button>
+            <div className="viewer-zoom">
+              <button type="button" className="ghost" disabled={zoom <= 100}
+                      aria-label={t('mobile.zoomOut')} onClick={() => setZoom((z) => Math.max(100, z - 25))}>−</button>
+              <span aria-live="polite">{zoom}%</span>
+              <button type="button" className="ghost" disabled={zoom >= 250}
+                      aria-label={t('mobile.zoomIn')} onClick={() => setZoom((z) => Math.min(250, z + 25))}>+</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {tab === 'preview' && (
+        <div className={'compare' + (paired ? ' compare-fixed' : '') + (applying ? ' applying' : '')}>
           {/* nessuna entità: un cartellino al centro, SOPRA le due anteprime.
               pointer-events: none tranne la «x» — sotto si continua a poter
               trascinare per anonimizzare a mano quello che il rilevatore non
@@ -833,62 +999,40 @@ export default function DocumentViewer({ doc, onChange, onJobStart,
               </div>
             </div>
           )}
-          <section className="pane">
-            <h3>{t('pane.original')}{' '}
-              <span className="pane-hint">{t('pane.originalHint')}</span>
-            </h3>
-            <div className="pages" ref={leftRef} onScroll={() => onScroll(leftRef, rightRef)}>
-              {sizesO.map((size, n) => (
-                <Page key={n} docId={doc.id} source="original" n={n}
-                      size={size} boxes={doc.original_boxes[n]} rev={doc.rev || 0}
-                      highlight services={services}
-                      tooltipFor={(b) => t('box.tooltipOriginal', { placeholder: b.ph })
-                        + (b.ocr ? t('box.ocrSuffix') : '')}
-                      columns={colLayout?.original?.[n]}
-                      onColumnAction={columnAction}
-                      onAnonymizeText={anonymizeText}
-                      onReprocessOcr={reprocessOcr}
-                      hotKeys={hotTwins.original} onHot={setHot} />
-              ))}
-              <div className="pages-tail" />
-            </div>
-          </section>
-          <section className="pane">
-            <h3>{t('pane.anonymized')}{' '}
-              <span className="pane-hint">
-                {t(sealMode ? 'pane.sealHint' : 'pane.anonymizedHint')}
-              </span>
-              {canSeal && (
-                <button className={'sealtoggle' + (sealMode ? ' on' : '')}
-                        title={t('pane.sealToggleHint')}
-                        onClick={() => setSealMode((m) => !m)}>
-                  {t(sealMode ? 'pane.sealToggleOn' : 'pane.sealToggle')}
-                </button>
-              )}
-            </h3>
-            <div className="pages" ref={rightRef}
-                 onScroll={() => onScroll(rightRef, leftRef, true)}>
-              {sizesA.map((size, n) => (
-                <Page key={n} docId={doc.id} source="anonymized" n={n}
-                      size={size} boxes={doc.anonymized_boxes[n]} rev={doc.rev || 0}
-                      mapping={doc.mapping} services={services}
-                      tooltipFor={(b) => (b.sealed ? t('box.sealed')
-                        : t('box.tooltipAnon', { placeholder: b.ph,
-                                                 value: doc.mapping[b.ph] ?? '?' })
-                          + (b.ocr ? t('box.ocrSuffix') : ''))}
-                      columns={colLayout?.anonymized?.[n]}
-                      onColumnAction={columnAction}
-                      onDeanonymize={deanonymize}
-                      onAnonymizeText={anonymizeText}
-                      onReprocessOcr={reprocessOcr}
-                      hotKeys={hotTwins.anonymized} onHot={setHot}
-                      sealMode={canSeal && sealMode} nPages={sizesA.length}
-                      onSealArea={canSeal ? sealArea : undefined}
-                      onRemoveSeal={canSeal ? removeSeal : undefined} />
-              ))}
-              <div className="pages-tail" />
-            </div>
-          </section>
+          {paired ? (
+            <>
+              <div className="pane pane-original">{renderTitle('original')}</div>
+              <div className="pane pane-anonymized">{renderTitle('anonymized')}</div>
+              <div className="pages pages-paired" ref={pairedRef}
+                   role="region" aria-label={t('tab.compare')} tabIndex={0}
+                   onScroll={() => rememberPosition(pairedRef.current)}>
+                {sizesO.map((_size, n) => (
+                  <div className="page-pair" key={n} data-page-index={n}
+                       style={{ width: `${zoom}%` }}>
+                    {renderPage('original', n)}
+                    {renderPage('anonymized', n)}
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : (
+            <>
+              <section className="pane pane-original">
+                {renderTitle('original')}
+                <div className="pages" ref={leftRef} onScroll={() => onScroll(leftRef, rightRef)}>
+                  {sizesO.map((_size, n) => renderPage('original', n))}
+                  <div className="pages-tail" />
+                </div>
+              </section>
+              <section className="pane pane-anonymized">
+                {renderTitle('anonymized')}
+                <div className="pages" ref={rightRef} onScroll={() => onScroll(rightRef, leftRef, true)}>
+                  {sizesA.map((_size, n) => renderPage('anonymized', n))}
+                  <div className="pages-tail" />
+                </div>
+              </section>
+            </>
+          )}
         </div>
       )}
 

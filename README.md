@@ -60,9 +60,13 @@ BlockingBear is for the companies and the people who want to stop making that ch
 
 The models are not just a request to OpenRouter and a reply. Each one comes with tools, and the tools run on your machine.
 
-🧪 **A code interpreter next to your files.** Ask for a pivot on the spreadsheet you uploaded, a chart, a cleaned-up CSV, a rebuilt PDF: the model writes Python and runs it in a Docker sandbox on your machine, with the conversation files copied into a private tmpfs workspace. One fresh container per conversation, no network, destroyed when the chat goes idle. In anonymized chats the model only sees the anonymized documents.
+🧪 **A code interpreter next to your files.** Ask for a pivot table on an uploaded spreadsheet, a chart, a cleaned-up CSV or a rebuilt PDF: the model writes Python, and BlockingBear runs it in a Docker sandbox on your machine. In anonymized chats, **the model and its code work only on anonymized copies of your files**, with placeholders in place of sensitive data. When you download the edited file, BlockingBear replaces the placeholders with the real values, so you get your file back with the original data restored.
 
-🌐 **Web search that keeps the anonymization.** Two tools, `web_search` and `read_page`, the model decides what to search and which pages to open. Browsing runs through a local, headless Camoufox browser, not through a search API of the model provider. Searching for `ORG_1` returns nothing, so the query is de-anonymized on your machine at the moment it hits the search engine, and every page that comes back is pushed through the full anonymization pipeline before the model reads it. The search engine receives the real terms, as it would if you typed them yourself; the model provider gets tags, not names. The engine is DuckDuckGo by default, which does not track users or build profiles; the administrator can point the browser at a different engine with `BLOCKINGBEAR_WEB_SEARCH_URL`, or disable web search for every chat from Settings.
+🌐 **Web search with anonymized results.** In anonymized chats, the model receives anonymized information even when searching the web. It has tools to request searches and open pages, while BlockingBear handles the browsing on your machine through Camofox.
+
+For example, the model might request a search for `[ORG_1] revenue 2026`. BlockingBear replaces `[ORG_1]` with the real company name locally, runs the search, and anonymizes the results before returning them to the model. Any pages the model asks to open go through the same process.
+
+The search engine receives the real search terms, just as if you typed them yourself. The model sees the anonymized results, with placeholders in place of sensitive data.
 
 
 ## Supported deployment

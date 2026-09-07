@@ -10,6 +10,7 @@ import { api } from './api.js'
 import { useAuth } from './auth.jsx'
 import { ChatsProvider, useChats } from './chats.jsx'
 import { JobsProvider, JobCards } from './jobs.jsx'
+import ResponsiveSidebar from '@/components/ResponsiveSidebar.jsx'
 import ChatSearchDialog from '@/components/ChatSearchDialog.jsx'
 import { Logo } from '@/components/Logo.jsx'
 import { FlagIt } from '@/i18n/languages.jsx'
@@ -89,7 +90,8 @@ function SidebarChats() {
                 : <LockOpen className="size-3 shrink-0 text-amber-600 dark:text-amber-400" />}
               <span className="min-w-0 flex-1 truncate" title={c.title}>{c.title}</span>
               <Trash2
-                className="size-3.5 shrink-0 text-muted-foreground opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100"
+                className="touch-action size-3.5 shrink-0 text-muted-foreground opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100 group-focus-within:opacity-100"
+                tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') askRemove(c, e) }}
                 role="button" aria-label={t('actions.delete', { ns: 'common' })}
                 onClick={(e) => askRemove(c, e)}
               />
@@ -155,7 +157,7 @@ function UserMenu({ user, logout }) {
     <div ref={ref} className="relative min-w-0 flex-1">
       <button type="button" onClick={() => setOpen((o) => !o)}
               aria-haspopup="menu" aria-expanded={open} data-tour="user-menu"
-              className="-m-1 flex w-full cursor-pointer items-center gap-2 rounded-md p-1 text-left transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40">
+              className="-m-1 flex min-h-11 lg:min-h-0 w-full cursor-pointer items-center gap-2 rounded-md p-1 text-left transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40">
         <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-secondary text-[10px] font-semibold uppercase text-secondary-foreground">
           {user.username.slice(0, 1)}
         </span>
@@ -164,7 +166,7 @@ function UserMenu({ user, logout }) {
       </button>
       {open && (
         <div role="menu"
-             className="absolute bottom-full left-0 z-50 mb-2 flex w-56 flex-col gap-0.5 rounded-md border border-border bg-popover p-1 shadow-md">
+             className="absolute bottom-full left-0 z-50 mb-2 flex max-h-[65dvh] overflow-y-auto w-56 flex-col gap-0.5 rounded-md border border-border bg-popover p-1 shadow-md">
           {items.map(({ to, icon: Icon, label }) => (
             <NavLink key={to} to={to} role="menuitem" onClick={() => setOpen(false)}
                      className={({ isActive }) => cn(
@@ -203,13 +205,43 @@ export default function DashboardLayout() {
   const { user, logout } = useAuth()
   const { t } = useTranslation()
 
+  // L'altezza della shell la decide il CSS (100dvh: esatta anche quando il
+  // viewport in CSS px non è intero, cioè con lo zoom del browser o Windows al
+  // 125%). Mai window.innerHeight: è un intero ARROTONDATO, può superare il
+  // viewport reale di mezzo pixel e quel mezzo pixel basta a far comparire la
+  // scrollbar del documento accanto a quella del thread. Il JS interviene
+  // solo quando la tastiera virtuale copre il visual viewport senza
+  // ridimensionare quello di layout (iOS Safari ignora
+  // interactive-widget=resizes-content): allora --app-height stringe la shell
+  // alla parte visibile, arrotondando per DIFETTO.
+  useEffect(() => {
+    const viewport = window.visualViewport
+    if (!viewport) return
+    const root = document.documentElement.style
+    const update = () => {
+      const covered = window.innerHeight - viewport.height
+      if (viewport.scale === 1 && covered > 100) {
+        root.setProperty('--app-height', `${Math.floor(viewport.height)}px`)
+      } else {
+        root.removeProperty('--app-height')
+      }
+    }
+    update()
+    viewport.addEventListener('resize', update)
+    return () => {
+      viewport.removeEventListener('resize', update)
+      root.removeProperty('--app-height')
+    }
+  }, [])
+
   return (
     <JobsProvider>
       <ChatsProvider>
       <OnboardingProvider>
-        <div className="flex h-full">
-          <nav className="flex w-[250px] flex-none flex-col border-r border-border bg-card">
-            <div className="px-4 pb-4 pt-5">
+        <div className="app-shell flex h-full min-h-0 w-full flex-col lg:flex-row">
+          <ResponsiveSidebar title={t('nav.menu')} brand={<Logo />}
+                             className="flex w-[250px] flex-none flex-col border-r border-border bg-card">
+            <div className="px-4 pb-4 pr-14 pt-5 lg:pr-4">
               <Logo subtitle={t('app.subtitle')} />
             </div>
 
@@ -227,15 +259,15 @@ export default function DashboardLayout() {
               <SidebarChats />
             </div>
 
-            <div className="flex h-[42px] flex-none items-center gap-2 border-t border-border px-3">
+            <div className="sidebar-footer flex min-h-[52px] lg:min-h-[42px] flex-none items-center gap-2 border-t border-border px-3">
               <UserMenu user={user} logout={logout} />
               {/* la lingua sta qui e non dentro il menu perché è la cosa da
                   cui si riparte quando l'interfaccia è nella lingua sbagliata:
                   deve essere raggiungibile senza saper leggere i menu */}
               <LanguageSwitcher className="shrink-0" />
             </div>
-          </nav>
-          <div className="flex min-h-0 min-w-0 flex-1">
+          </ResponsiveSidebar>
+          <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden">
             <Outlet />
           </div>
         </div>

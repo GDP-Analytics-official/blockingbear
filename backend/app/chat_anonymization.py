@@ -35,6 +35,7 @@ from .db import (Attachment, Conversation, ConversationEntity,
                  ConversationEntityAlias)
 from .engine import image_ocr
 from .engine.detectors import EXACT_SPAN_LABELS
+from .engine.text_patterns import exact_pattern
 from .engine.convert import to_docx, to_pdf, to_pptx, to_xlsx
 from .engine.core import PiiEngine
 from .engine.mupdf_lock import mupdf_serialized
@@ -102,11 +103,7 @@ def _exact_pattern(value):
     """Ricerca ESATTA: una password è case-sensitive e la sua punteggiatura
     fa parte del valore ("Estate2024!" non è "estate2024"). Confini di parola
     solo dove il valore comincia o finisce con un carattere di parola."""
-    if not value:
-        return None
-    left = r"(?<!\w)" if re.match(r"\w", value) else ""
-    right = r"(?!\w)" if re.search(r"\w$", value) else ""
-    return re.compile(left + re.escape(value) + right)
+    return exact_pattern(value)
 
 
 def _pattern_for(ph, value):
@@ -135,6 +132,8 @@ def _junk_value(label, value):
     """Span che non individua nessuno: un carattere, un frammento, la sola
     forma societaria. Non consuma un placeholder e resta in chiaro: non è PII
     e, entrando nel registro, avvelenerebbe ogni controllo successivo."""
+    if _label_group(label) in EXACT_SPAN_LABELS:
+        return not value
     text = unicodedata.normalize("NFKC", str(value or "")).strip()
     if len(_alnum(text)) < 2:
         return True
@@ -202,11 +201,11 @@ def _surface_core(label, value):
     if group in EXACT_SPAN_LABELS:
         # credenziali e identificativi tecnici: confronto esatto, niente casefold
         # né punteggiatura tolta
-        return str(value or "").strip()
+        return str(value or "")
     text = unicodedata.normalize("NFKC", str(value or "")).casefold()
     text = re.sub(r"\s+", " ", text).strip()
     if group == "FULLNAME":
-        text = re.sub(r"^(?:dott(?:\.ssa)?|dr|avv|ing|prof)\.?\s+", "", text)
+        text = re.sub(r"^(?:dott(?:\.ssa)?|dr|avv|ing|prof|mr|mrs|ms|miss|mme|mlle|monsieur|madame|herr|frau|sr|sra|señor|señora|dhr|mevr|meneer|mevrouw)\.?\s+", "", text)
     # punteggiatura controllata: conserva lettere, numeri, @, + e trattini
     text = re.sub(r"[.,;:'\"()]+", " ", text)
     text = re.sub(r"\s+", " ", text).strip()
@@ -222,7 +221,7 @@ def _surface_core(label, value):
         # rischio, allargarle aggiungerebbe solo falsi positivi.
         text = re.sub(
             r"\s+(?:s\s*r\s*[li1|]\s*s?|s\s*p\s*a|s\s*a\s*s|s\s*n\s*c|"
-            r"societa cooperativa|cooperativa|ltd|limited|inc|llc)$", "", text)
+            r"societa cooperativa|cooperativa|ltd|limited|inc|llc|gmbh|b\s*v|n\s*v|sarl|s\s*l)$", "", text)
         text = re.sub(r"\s+", " ", text).strip()
     if group == "FULLNAME":
         text = " ".join(sorted(text.split(" ")))
@@ -1608,10 +1607,14 @@ def merge_notes(session, conv_id):
     pairs = sorted(merged_placeholders(session, conv_id).items())
     if not pairs:
         return None
-    return ("Equivalenze tra segnaposto (entità unite dall'utente): il "
-            "segnaposto a sinistra compare in messaggi o allegati più "
-            "vecchi e indica la STESSA entità di quello a destra. Nei "
-            "tuoi testi usa quello a destra.\n"
+    return ("Equivalenze tra segnaposto (entità unite dall'utente): i "
+            "segnaposto sulla stessa riga indicano la STESSA entità; quello "
+            "a sinistra compare in messaggi o allegati più vecchi. Nei tuoi "
+            "testi usa UN solo segnaposto per entità e mantienilo per tutta "
+            "la risposta. Se dal contesto uno sembra più affidabile "
+            "(compare più volte, sta nei documenti più completi, è quello a "
+            "cui l'utente si riferisce), preferisci quello. Non vedi i "
+            "valori: scegli per contesto, non per etichetta.\n"
             + "\n".join(f"- {src} = {dst}" for src, dst in pairs))
 
 
@@ -2575,6 +2578,18 @@ def restore_artifact(path, mapping, source=None, images=None):
             # (auto-descritto nel bgColor del fill: vedi engine/xlsx.py)
             parts = {i.filename: src.read(i.filename) for i in src.infolist()}
             styled = restore_cell_styles(parts, set(mapping))
+            parts.update(styled)
+            from .engine.xlsx_names import (restore_names, restore_formula_literals,
+                                            WorkbookNameError)
+            try:
+                named, restored_names = restore_names(parts, mapping)
+            except WorkbookNameError as exc:
+                return None, 0, [], {"error": str(exc)}
+            parts.update(named)
+            literals, restored_literals = restore_formula_literals(parts, mapping)
+            styled.update(named)
+            styled.update(literals)
+            total += restored_names + restored_literals
         for item in src.infolist():
             data = styled.get(item.filename) or src.read(item.filename)
             if item.filename.lower().endswith((".xml", ".rels")):

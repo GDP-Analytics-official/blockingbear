@@ -81,6 +81,9 @@ import math
 import re
 import unicodedata
 
+from .text_patterns import (WORD, literal, exact_pattern, PLACEHOLDER_RE,
+                            contains_literal, canonical)
+
 import fitz  # PyMuPDF
 
 from . import pdf_ghost
@@ -119,7 +122,7 @@ def _norm(s):
     dietro torch e il modello e costerebbe l'isolamento dichiarato in testa
     al modulo. Le due devono restare IDENTICHE: un valore normalizzato in un
     modo dal motore e in un altro qui non si ritroverebbe nella pagina."""
-    return re.sub(r"\s+", " ", (s or "").strip()).casefold()
+    return canonical(s or "")
 
 
 def _fit_fontsize(text, rect, max_fs=10.0, min_fs=4.0):
@@ -221,7 +224,7 @@ _HYPHEN_BREAK = r"(?:[­‐-]?[ \t]*\n[ \t]*)?"
 _UNANCHORED_MIN_ALNUM = 4
 
 
-def _value_pattern(value):
+def _value_pattern(value, placeholder=None):
     """Regex del valore: caratteri esatti con CONFINI DI PAROLA agli estremi,
     sillabazione a fine riga tollerata, whitespace flessibile tra i token.
     Niente match di sottostringhe dentro altre parole.
@@ -240,7 +243,13 @@ def _value_pattern(value):
     spazzatura e in un JSON il file non si apre più. Un numero attaccato a un
     separatore decimale e ad altre cifre è un numero DIVERSO da quello
     etichettato, quindi non è un match e non va redatto."""
-    v = _norm(value)
+    if placeholder:
+        from .detectors import EXACT_SPAN_LABELS
+        label = placeholder.strip("[]").rsplit("_", 1)[0]
+        if label in EXACT_SPAN_LABELS:
+            return exact_pattern(value)
+    # Keep original spelling: casefold is a key, not a literal search pattern.
+    v = re.sub(r"\s+", " ", unicodedata.normalize("NFC", value).strip())
     core = re.sub(r"^[^\w]+", "", v)
     core = re.sub(r"[^\w]+$", "", core)
     toks = [t for t in core.split(" ") if t]
@@ -256,7 +265,9 @@ def _value_pattern(value):
         left += r"(?<!\d[.,])"
     if toks[-1][-1].isdigit():
         right += r"(?![.,]\d)"
-    body = r"\s*".join(_HYPHEN_BREAK.join(re.escape(c) for c in tok) for tok in toks)
+    body = r"\s*".join(literal(tok, _HYPHEN_BREAK) for tok in toks)
+    left = left.replace(r"\w", "[" + WORD + "]")
+    right = right.replace(r"\w", "[" + WORD + "]")
     return re.compile(left + body + right, re.IGNORECASE)
 
 
@@ -364,12 +375,16 @@ def _clamp_line_bleed(rect, m, boxes):
     return r
 
 
-def _too_noisy(value):
+def _too_noisy(value, placeholder=None):
     """Valori non localizzabili in modo sicuro in un PDF: frammenti con meno di 2
     caratteri alfanumerici, o di 2 sole cifre (es. "1", "C", "05", prodotti a
     volte dal modello su testi tabellari). Cercarli ovunque cancellerebbe pezzi di
     documento non-PII: si saltano, MA il chiamante deve avvisare l'utente (restano
     in chiaro)."""
+    if placeholder:
+        from .detectors import EXACT_SPAN_LABELS
+        if placeholder.strip("[]").rsplit("_", 1)[0] in EXACT_SPAN_LABELS:
+            return not value
     alnum = re.sub(r"[\W_]+", "", _norm(value))
     return len(alnum) < 2 or (len(alnum) == 2 and alnum.isdigit())
 
@@ -620,15 +635,13 @@ def _readable_text(doc):
 
 @mupdf_serialized
 def _verify_residuals(pdf_bytes, items):
-    """Placeholder il cui valore è ANCORA leggibile nell'output. Usa lo STESSO
-    pattern della redazione (sillabazione inclusa), altrimenti dichiarerebbe
-    "0 residui" proprio nei casi che il matcher non sa gestire."""
+    """Find remaining values using fuzzy matching and an independent literal scan."""
     with fitz.open(stream=pdf_bytes, filetype="pdf") as doc:
         text = _readable_text(doc)
     residual = []
     for ph, val in items:
-        pat = _value_pattern(val)
-        if pat and pat.search(text):
+        pat = _value_pattern(val, ph)
+        if (pat and pat.search(text)) or contains_literal(text, val, ph):
             residual.append(ph)
     return residual
 
@@ -698,10 +711,10 @@ def redact_pdf(pdf_bytes, mapping, fill=REDACT_FILL, text_color=REDACT_TEXT):
 
     skipped, usable = [], []
     for ph, val in items:
-        if _too_noisy(val):
+        if _too_noisy(val, ph):
             skipped.append(ph)
             continue
-        pat = _value_pattern(val)
+        pat = _value_pattern(val, ph)
         if pat:
             usable.append((ph, val, pat))
         else:
@@ -923,9 +936,8 @@ def text_to_pdf(text, margin=56.0, fontsize=10.5, leading=15.5):
 # Forma canonica di un segnaposto e variante che tollera l'a-capo in mezzo (un
 # segnaposto lungo dentro una cella strettissima può essere spezzato da
 # LibreOffice come qualsiasi altra parola).
-PLACEHOLDER_RE = re.compile(r"\[[A-Z][A-Z0-9_]*_\d+\]")
 _PH_BROKEN_RE = re.compile(
-    r"\[" + _HYPHEN_BREAK + r"[A-Z](?:" + _HYPHEN_BREAK + r"[A-Z0-9_])*"
+    r"\[" + _HYPHEN_BREAK + r"[A-Z0-9_](?:" + _HYPHEN_BREAK + r"[A-Z0-9_])*"
     + _HYPHEN_BREAK + r"_" + _HYPHEN_BREAK + r"\d(?:" + _HYPHEN_BREAK
     + r"\d)*" + _HYPHEN_BREAK + r"\]")
 _BREAK_STRIP_RE = re.compile(r"[­‐-]?[ \t]*\n[ \t]*")

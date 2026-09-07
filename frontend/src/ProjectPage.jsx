@@ -183,8 +183,8 @@ export default function ProjectPage() {
     // qui l'anonimizzazione di colonna è un JOB in coda (nell'anteprima
     // della chat è sincrona): il viewer ne tiene conto nella conferma
     columnJobs: true,
-    fetchPagePng: (_fid, source, n, rev) =>
-      fetchProjectPagePng(id, reviewId, source, n, rev),
+    fetchPagePng: (_fid, source, n, rev, signal) =>
+      fetchProjectPagePng(id, reviewId, source, n, rev, signal),
     extractText: (_fid, source, page, rect) =>
       api.projectExtractText(id, reviewId, source, page, rect),
     deanonymize: (_fid, body) => api.projectDeanonymize(id, reviewId, body),
@@ -546,7 +546,7 @@ export default function ProjectPage() {
 
   return (
     <main className="min-w-0 flex-1 overflow-y-auto">
-      <div className="mx-auto flex w-full max-w-3xl flex-col gap-5 p-6">
+      <div className="mx-auto flex w-full page-content max-w-3xl flex-col gap-5">
         <Link to="/projects" className="text-sm text-muted-foreground hover:underline">
           {t('backToProjects')}
         </Link>
@@ -561,7 +561,7 @@ export default function ProjectPage() {
                      if (e.key === 'Escape') setRenaming(false)
                    }} />
           ) : (
-            <h1 className="flex items-center gap-2 text-xl font-semibold tracking-tight">
+            <h1 className="flex min-w-0 max-w-full items-center gap-2 [overflow-wrap:anywhere] text-xl font-semibold tracking-tight">
               {project.name}
               <Button variant="ghost" size="icon-sm" title={t('rename')}
                       aria-label={t('renameAria')}
@@ -717,7 +717,7 @@ export default function ProjectPage() {
         {/* file del progetto */}
         {project.files.length > 0 && (
           <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
-            <Table>
+            <Table className="mobile-card-table">
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
                   <TableHead>{t('table.file')}</TableHead>
@@ -775,10 +775,10 @@ export default function ProjectPage() {
                         </div>
                       </TableCell>
                     )}
-                    <TableCell className="text-right tabular-nums text-muted-foreground">
+                    <TableCell data-label={t('table.size')} className="text-right tabular-nums text-muted-foreground">
                       {fmtSize(f.size)}
                     </TableCell>
-                    <TableCell className="whitespace-nowrap tabular-nums text-muted-foreground">
+                    <TableCell className="mobile-secondary whitespace-nowrap tabular-nums text-muted-foreground">
                       {fmtDate(f.created_at, locale)}
                     </TableCell>
                     {isAnon && (
@@ -842,7 +842,7 @@ export default function ProjectPage() {
                           onClick={() => navigate(`/projects/${project.id}/chat?chat=${c.id}`)}>
                     <MessageSquare className="size-4 shrink-0 text-muted-foreground" />
                     <span className="min-w-0 flex-1 truncate font-medium">{c.title}</span>
-                    <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
+                    <span className="hidden shrink-0 text-xs tabular-nums text-muted-foreground sm:inline">
                       {fmtDate(c.updated_at, locale)}
                     </span>
                   </button>

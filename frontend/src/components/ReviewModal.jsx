@@ -6,6 +6,7 @@ import {
 } from 'lucide-react'
 import { Trans, useTranslation } from 'react-i18next'
 import DocumentViewer, { docWarnings } from '@/DocumentViewer.jsx'
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
@@ -105,7 +106,7 @@ export function EntityReview({ registry, suggestions, onChanged, applies = 'next
           <span className="text-xs font-medium text-secondary-foreground">
             {t('review.pending', { count: list.length })}
           </span>
-          <div className="ml-auto flex items-center gap-1">
+          <div className="ml-auto flex flex-wrap items-center gap-1">
             <Button size="sm" variant="ghost" disabled={busy}
                     className="gap-1.5 text-primary hover:bg-primary/10 hover:text-primary"
                     onClick={() => runAll('merge')}>
@@ -124,7 +125,7 @@ export function EntityReview({ registry, suggestions, onChanged, applies = 'next
         {list.map((s) => (
           <li key={s.source}
               className="flex flex-wrap items-center gap-x-3 gap-y-2 px-3 py-2.5">
-            <div className="flex min-w-0 flex-1 basis-80 items-center gap-2">
+            <div className="flex min-w-0 flex-1 basis-80 flex-wrap items-center gap-2">
               <EntityChip placeholder={s.source_placeholder} value={s.source_value} />
               <ArrowLeftRight className="size-3.5 shrink-0 text-muted-foreground" />
               <EntityChip placeholder={s.target_placeholder} value={s.target_value} />
@@ -208,7 +209,7 @@ export function EntityReview({ registry, suggestions, onChanged, applies = 'next
 // decide se le due sono la stessa cosa.
 function EntityChip({ placeholder, value }) {
   return (
-    <span className="inline-flex min-w-0 items-center gap-1.5 rounded-md border border-border bg-background px-2 py-1">
+    <span className="inline-flex min-w-0 max-w-full flex-wrap items-center gap-1.5 rounded-md border border-border bg-background px-2 py-1">
       {placeholder && (
         <span className="shrink-0 font-mono text-[10.5px] text-primary">
           {placeholder}
@@ -242,7 +243,7 @@ function WarnBadge({ warnings, title }) {
         <AlertTriangle className="size-4" />
       </button>
       {open && (
-        <div className="absolute bottom-full left-0 z-30 mb-1 w-[420px] max-w-[85vw] overflow-hidden rounded-lg border border-border bg-popover shadow-lg">
+        <div className="floating-panel absolute bottom-full left-0 z-30 mb-1 w-[420px] max-w-[85vw] overflow-hidden rounded-lg border border-border bg-popover shadow-lg">
           {warnings.map((w, i) => (
             <div key={i} className="flex items-start gap-2 border-b border-border px-3 py-2 last:border-b-0">
               <AlertTriangle className="mt-0.5 size-3.5 shrink-0 text-amber-700 dark:text-amber-400" />
@@ -303,11 +304,6 @@ export default function ReviewModal({
   useEffect(() => { refreshSuggestions() }, [refreshSuggestions])
   useEffect(() => { if (suggestions?.length) setMergeStep(true) }, [suggestions])
 
-  useEffect(() => {
-    const onKey = (e) => { if (e.key === 'Escape') onCancel() }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [onCancel])
 
   // ogni modifica ai pezzi ri-redige e cambia il registro: le coppie proposte
   // vanno ricalcolate (lo step compare, o cambia contenuto)
@@ -336,9 +332,12 @@ export default function ReviewModal({
   const displayName = (it) =>
     (it.kind === 'prompt' ? t('review.yourMessage') : it.filename)
   return (
-    <div className="fixed inset-0 z-40 grid place-items-center bg-black/50 p-3">
-      <div className="flex h-[94vh] w-[min(1500px,97vw)] flex-col overflow-hidden rounded-xl border border-border bg-background shadow-2xl">
-        <header className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-border px-4 py-3">
+    <Dialog open onOpenChange={(open) => { if (!open) onCancel() }}>
+      <DialogContent hideClose aria-describedby={undefined}
+                     onPointerDownOutside={(e) => e.preventDefault()}
+                     className="review-modal flex h-[100dvh] max-h-[100dvh] w-full max-w-none sm:h-[94dvh] sm:w-[min(1500px,97vw)] flex-col gap-0 overflow-hidden rounded-xl border border-border bg-background p-0 sm:p-0 shadow-2xl">
+        <DialogTitle className="sr-only">{t('review.title')}</DialogTitle>
+        <header className="review-header shrink-0 flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-border px-4 py-3">
           <span className="inline-flex items-center gap-2 font-medium text-emerald-700 dark:text-emerald-400">
             <Lock className="size-4" /> {t('review.title')}
           </span>
@@ -348,14 +347,14 @@ export default function ReviewModal({
                              confirm: confirmText }}
                    components={{ b: <b className="text-foreground" /> }} />
           </span>
-          <div className="ml-auto flex flex-wrap items-center gap-1.5">
+          <div className="review-steps ml-auto flex min-w-0 max-w-full items-center gap-1.5 overflow-x-auto sm:flex-wrap">
             {steps.map((it, i) => (
               <button key={it.id} type="button" onClick={() => setIndex(i)}
                       title={it.kind === 'merge' ? t('review.registryTitle')
                         : t('review.chipFile', { file: displayName(it),
                                                  count: it.n_entities ?? 0 })}
                       className={cn(
-                        'max-w-[220px] truncate rounded-full border px-2.5 py-0.5 text-xs',
+                        'max-w-[220px] shrink-0 truncate rounded-full border px-2.5 py-0.5 text-xs',
                         i === index
                           ? 'border-emerald-500/60 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'
                           : 'border-border text-muted-foreground hover:bg-accent')}>
@@ -365,7 +364,7 @@ export default function ReviewModal({
           </div>
         </header>
         {merging ? (
-          <div className="review-body min-h-0 flex-1 overflow-y-auto p-6">
+          <div className="review-body min-h-0 flex-1 overflow-y-auto p-3 sm:p-6">
             <div className="mx-auto w-full max-w-3xl overflow-hidden rounded-xl border border-border bg-card shadow-sm">
               <div className="flex items-start gap-3 border-b border-border px-4 py-3">
                 <span className="mt-0.5 inline-flex size-8 shrink-0 items-center justify-center rounded-lg bg-secondary text-primary">
@@ -399,7 +398,7 @@ export default function ReviewModal({
                             onChange={handleChange} onJobStart={onJobStart} />
           </div>
         )}
-        <footer className="flex items-center gap-2 border-t border-border px-4 py-3">
+        <footer className="review-footer shrink-0 flex flex-wrap items-center gap-2 border-t border-border px-4 py-3">
           {/* la .tabs è la primitiva CSS del viewer, globale: qui pilota la
               tab del DocumentViewer sopra */}
           {!merging && (
@@ -451,7 +450,7 @@ export default function ReviewModal({
             </Button>
           )}
         </footer>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   )
 }

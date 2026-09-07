@@ -434,8 +434,8 @@ def main():
     for e in ents:
         check(set(e) >= {"label", "start", "end", "score", "validated", "source"}, f"campi entità {e}")
     check(not (CYBER_LABELS & SOFT_REGEX_LABELS), "nessuna label cyber è soft")
-    check(EXACT_SPAN_LABELS == CREDENTIAL_LABELS | CYBER_LABELS, "EXACT_SPAN_LABELS = credenziali + cyber")
-    check(TAG_GROUPS["cyber"] == sorted(EXACT_SPAN_LABELS | DEVICE_LABELS), f"gruppo cyber: {TAG_GROUPS}")
+    check(EXACT_SPAN_LABELS == CREDENTIAL_LABELS | CYBER_LABELS | {"URL", "EMAIL"}, "Exact spans include credentials, cyber, URL and email")
+    check(TAG_GROUPS["cyber"] == sorted(CREDENTIAL_LABELS | CYBER_LABELS | DEVICE_LABELS), f"gruppo cyber: {TAG_GROUPS}")
     check("PASSWORD" in TAG_GROUPS["cyber"] and IP in TAG_GROUPS["cyber"], "il gruppo contiene credenziali e cyber")
 
     print("[D] fusione: span esatte, priorità")
@@ -487,7 +487,7 @@ def main():
         tags = core.PiiEngine(str(model_dirs[0])).tags()
         check(CYBER_LABELS <= set(tags["all"]) and CYBER_LABELS <= set(tags["regex_only"]),
               f"tags(): {tags['regex_only']}")
-        check(tags["groups"] == {"cyber": sorted(EXACT_SPAN_LABELS | DEVICE_LABELS)},
+        check(tags["groups"] == {"cyber": sorted(CREDENTIAL_LABELS | CYBER_LABELS | DEVICE_LABELS)},
               f"tags()['groups']: {tags['groups']}")
     else:
         print("  (nessun modello scaricato: tags() non verificato)")

@@ -1,3 +1,4 @@
+import { useMediaQuery } from '@/lib/useMediaQuery.js'
 import React, { useState } from 'react'
 import { ChartColumn, Download, FileSpreadsheet, Table2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
@@ -103,7 +104,8 @@ function TipRows({ title, segments, total }) {
 export function StackedColumns({ categories, series, ariaLabel }) {
   const [tip, setTip] = useState(null)     // {i, leftPct}
   const { t } = useTranslation('costs')
-  const W = 800; const H = 240
+  const compact = useMediaQuery('(max-width: 639px)')
+  const W = compact ? 360 : 800; const H = 240
   const M = { top: 10, right: 8, bottom: 24, left: 48 }
   const plotW = W - M.left - M.right
   const plotH = H - M.top - M.bottom
@@ -160,7 +162,11 @@ export function StackedColumns({ categories, series, ariaLabel }) {
                       fontSize="10.5" fill="var(--muted-foreground)">{d.label}</text>
               )}
               <rect x={M.left + i * slot} y={M.top} width={slot} height={plotH}
-                    fill="transparent"
+                    fill="transparent" tabIndex={0}
+                    aria-label={`${d.label}: ${fmtUsd(d.total)}`}
+                    onFocus={() => setTip({ i, leftPct: (M.left + i * slot + slot / 2) / W * 100 })}
+                    onBlur={() => setTip(null)}
+                    onClick={() => setTip({ i, leftPct: 50 })}
                     onMouseEnter={() => setTip({ i, leftPct: (M.left + i * slot + slot / 2) / W * 100 })}
                     onMouseLeave={() => setTip(null)} />
             </g>
@@ -168,7 +174,7 @@ export function StackedColumns({ categories, series, ariaLabel }) {
         })}
       </svg>
       {tip && (
-        <div className="pointer-events-none absolute top-1 z-10 -translate-x-1/2 rounded-md border border-border bg-popover px-3 py-2 text-xs shadow-md"
+        <div className="chart-tip pointer-events-none absolute top-1 z-10 -translate-x-1/2 rounded-md border border-border bg-popover px-3 py-2 text-xs shadow-md"
              style={{ left: `${tip.leftPct}%` }}>
           <TipRows title={categories[tip.i].label}
                    segments={categories[tip.i].segments}
@@ -195,18 +201,20 @@ export function StackedBars({ rows, series }) {
     <div className="relative">
       <div className="flex flex-col gap-2">
         {rows.map((r, i) => (
-          <div key={r.key} className="flex items-center gap-3 text-sm"
+          <div key={r.key} className="cost-bar flex items-center gap-3 text-sm"
+               tabIndex={0} onFocus={() => setTip(i)} onBlur={() => setTip(null)}
+               onClick={() => setTip(i)}
                onMouseEnter={() => setTip(i)} onMouseLeave={() => setTip(null)}>
-            <span className="w-56 shrink-0 truncate text-right text-muted-foreground"
+            <span className="w-24 sm:w-56 shrink-0 truncate text-right text-muted-foreground"
                   title={r.label}>{r.label}</span>
-            <div className="flex h-4 flex-1 items-stretch gap-[2px]">
+            <div className="flex min-w-0 h-4 flex-1 items-stretch gap-[2px]">
               {r.segments.filter((s) => s.value > 0).map((s, si, arr) => (
                 <span key={s.name}
                       className={si === arr.length - 1 ? 'rounded-r-[4px]' : ''}
                       style={{ background: s.color,
                                width: `${Math.max(s.value / max * 100, 0.5)}%` }} />
               ))}
-              <span className="flex items-center gap-2 whitespace-nowrap pl-2">
+              <span className="flex flex-wrap items-center gap-1 pl-2 sm:gap-2">
                 <span className="font-medium">{fmtUsd(r.total)}</span>
                 {r.hint && <span className="text-xs text-muted-foreground">{r.hint}</span>}
               </span>
@@ -215,7 +223,7 @@ export function StackedBars({ rows, series }) {
         ))}
       </div>
       {tip != null && (
-        <div className="pointer-events-none absolute left-60 z-10 rounded-md border border-border bg-popover px-3 py-2 text-xs shadow-md"
+        <div className="pointer-events-none absolute left-0 sm:left-60 max-w-full z-10 rounded-md border border-border bg-popover px-3 py-2 text-xs shadow-md"
              style={{ top: `${(tip + 1) / rows.length * 100}%` }}>
           <TipRows title={rows[tip].label} segments={rows[tip].segments}
                    total={rows[tip].total} />
@@ -240,7 +248,7 @@ function download(blob, filename) {
 function exportCsv(name, headers, rows) {
   const esc = (v) => {
     const s = String(v ?? '')
-    return /[",;\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
+    return /[",;\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
   }
   // ; come separatore e BOM: è quello che Excel in italiano si aspetta
   const text = [headers, ...rows].map((r) => r.map(esc).join(';')).join('\r\n')
@@ -265,7 +273,7 @@ export function ChartCard({ title, subtitle, table, exportName, children }) {
   const { t } = useTranslation('costs')
   return (
     <section className="rounded-xl border border-border bg-card p-5 shadow-sm">
-      <div className="mb-3 flex items-center gap-2">
+      <div className="mb-3 flex flex-wrap items-center gap-2">
         <h2 className="text-sm font-semibold">{title}</h2>
         {subtitle && <span className="text-xs text-muted-foreground">{subtitle}</span>}
         <div className="ml-auto flex items-center gap-1">

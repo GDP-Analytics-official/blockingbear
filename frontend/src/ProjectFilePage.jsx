@@ -1,3 +1,4 @@
+import { useMediaQuery } from '@/lib/useMediaQuery.js'
 import React, { useEffect, useMemo, useState } from 'react'
 import { Link, Navigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
@@ -20,6 +21,7 @@ const stem = (name) => name.replace(SOURCE_EXT_RE, '')
 // questa rotta con un file non confermato viene rimandato al progetto.
 export default function ProjectFilePage() {
   const { id, fileId } = useParams()
+  const wide = useMediaQuery('(min-width: 1024px)')
   const [doc, setDoc] = useState(null)
   const [error, setError] = useState('')
   const { addJob, docRefresh } = useJobs()
@@ -43,8 +45,8 @@ export default function ProjectFilePage() {
   const services = useMemo(() => ({
     // anonimizzazione di colonna come JOB in coda (vedi DocumentViewer)
     columnJobs: true,
-    fetchPagePng: (_fid, source, n, rev) =>
-      fetchProjectPagePng(id, fileId, source, n, rev),
+    fetchPagePng: (_fid, source, n, rev, signal) =>
+      fetchProjectPagePng(id, fileId, source, n, rev, signal),
     extractText: (_fid, source, page, rect) =>
       api.projectExtractText(id, fileId, source, page, rect),
     deanonymize: (_fid, body) => api.projectDeanonymize(id, fileId, body),
@@ -88,14 +90,16 @@ export default function ProjectFilePage() {
     <main className="main">
       <div className="page-head" style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
         <Link to={`/projects/${id}`} className="ghost backlink">{t('file.back')}</Link>
-        <h2 style={{ margin: 0, fontSize: 16 }} title={doc.filename}>{doc.filename}</h2>
+        <h2 style={{ margin: 0, fontSize: 16, overflowWrap: 'anywhere', minWidth: 0 }} title={doc.filename}>{doc.filename}</h2>
         {doc.briefing?.label && (
           <span className="muted" style={{ fontSize: 12 }}>{doc.briefing.label}</span>
         )}
         <span className="pill" style={{ color: 'var(--ok, #047857)', fontSize: 12 }}>
           {t('file.confirmed')}
         </span>
-        <span style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+        <details className="file-download-menu" open={wide || undefined}>
+          <summary>{t('file.downloads')}</summary>
+        <span className="file-downloads" style={{ marginLeft: 'auto', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {/* anche il suffisso del nome scaricato segue la lingua: il file
               finisce sul disco dell'utente, non resta dentro l'applicazione */}
           <button className="ghost"
@@ -114,6 +118,7 @@ export default function ProjectFilePage() {
             {t('file.downloadMap')}
           </button>
         </span>
+        </details>
       </div>
       <DocumentViewer doc={doc} services={services}
                       onChange={setDoc} onJobStart={addJob} />

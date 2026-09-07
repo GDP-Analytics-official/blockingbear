@@ -29,6 +29,7 @@ engine/__init__.py): report["residual"] rilegge l'output e deve essere vuota.
 """
 
 from .pdf_export import _too_noisy, _value_pattern
+from .text_patterns import contains_literal
 
 
 class TxtError(ValueError):
@@ -97,10 +98,10 @@ def redact_txt(txt_bytes, mapping):
 
     skipped, usable = [], []
     for ph, val in items:
-        if _too_noisy(val):
+        if _too_noisy(val, ph):
             skipped.append(ph)
             continue
-        pat = _value_pattern(val)
+        pat = _value_pattern(val, ph)
         if pat:
             usable.append((ph, val, pat))
         else:
@@ -121,7 +122,8 @@ def redact_txt(txt_bytes, mapping):
         text = text[:ms] + ph + text[me:]
         by_ph[ph] += 1
 
-    residual = [ph for ph, _val, pat in usable if pat.search(text)]
+    residual = [ph for ph, val, pat in usable
+                if pat.search(text) or contains_literal(text, val, ph)]
     out_enc = "utf-8-sig" if enc == "utf-8-sig" else "utf-8"
     return text.encode(out_enc), {
         "occurrences": sum(by_ph.values()),

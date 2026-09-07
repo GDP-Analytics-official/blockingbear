@@ -26,6 +26,8 @@ di una credenziale in chiaro verso l'esterno è alto: nel dubbio si maschera.
 import math
 import re
 
+from .text_patterns import normalized_detector
+
 from . import lexicon as _lx
 
 CREDENTIAL_LABELS = frozenset({"PASSWORD", "USERNAME", "SECRET"})
@@ -205,10 +207,7 @@ def _bad_value(value, quoted=False):
 # ----------------------------------------------------------------------------
 _QUOTES = {'"': '"', "'": "'", "`": "`", "«": "»", "“": "”", "‘": "’", "„": "“"}
 _TRAIL_PUNCT = ".,;:)]}»”’\"'`?"
-_MAX_VALUE = 160
-
-
-def _read_value(text, pos):
+def _read_value(text, pos, strict=False):
     """(start, end, quoted) del valore che comincia a `pos`, o None.
 
     Tra virgolette il valore può contenere spazi ("la password è 'ciao mondo 1'")
@@ -224,9 +223,15 @@ def _read_value(text, pos):
     ch = text[pos]
     if ch in _QUOTES:
         close = _QUOTES[ch]
-        end = text.find(close, pos + 1)
-        nl = text.find("\n", pos + 1)
-        if end != -1 and (nl == -1 or end < nl) and end - pos - 1 <= _MAX_VALUE:
+        end = pos + 1
+        while end < n and text[end] not in "\r\n":
+            if text[end] == "\\" and close in "\"'`":
+                end += 2                 # escaped quote belongs to the value
+                continue
+            if text[end] == close:
+                break
+            end += 1
+        if end < n and text[end] == close:
             if end > pos + 1:
                 return pos + 1, end, True
             return None                     # stringa vuota
@@ -236,7 +241,8 @@ def _read_value(text, pos):
     m = re.compile(r"[^\s]+").match(text, pos)
     if not m:
         return None
-    raw = m.group(0)[:_MAX_VALUE]
+    # Never report a successful prefix mask at an arbitrary length limit.
+    raw = m.group(0)
     # fine di un campo: ";Server=", ", utente:" oppure ',' / ';' seguiti da spazio
     for sep in (";", ",", "&"):
         i = raw.find(sep)
@@ -256,7 +262,8 @@ def _read_value(text, pos):
     if i > 0 and re.match(r"<[A-Za-z/]", raw[i:]):
         raw = raw[:i]
     # punteggiatura che chiude la frase, non il valore
-    while raw and raw[-1] in _TRAIL_PUNCT:
+    trail = _TRAIL_PUNCT.replace("?", "") if strict else _TRAIL_PUNCT
+    while raw and raw[-1] in trail:
         if raw[-1] == ")" and "(" in raw[:-1]:
             break
         if raw[-1] == "]" and "[" in raw[:-1]:
@@ -446,9 +453,13 @@ _CTX_RULES = [
     ("WEAK", re.compile(_kw_rx(_KW_SECRET_WEAK), re.I), _SEP_NOFILL_RX),
 ]
 # PIN/OTP scritti a gruppi: "5 4 3 2", "123 456", "1234-5678".
-_NUMERIC_AT = re.compile(r"[ \t]*(?P<v>\d(?:[ \-]?\d){2,7})(?!\d)")
+_NUMERIC_AT = re.compile(r"[ \t]*(?P<v>\d(?:[ \-]?\d){2,7})(?![\w]|[ \-]\d)")
 # passphrase senza virgolette: "correct horse battery staple" fino a fine riga o campo
-_PHRASE_AT = re.compile(r"[ \t]*(?P<v>[^\s\"';,][^\n\"';,]{6,118}?)[ \t]*(?=[;,\n]|\.\s|$)")
+_PHRASE_AT = re.compile(r"[ \t]*(?P<v>[^\s\"';,][^\n\"';,]{6,}?)[ \t]*(?=[;,\n]|\.\s|$)")
+_PASSPHRASE_KW = re.compile(
+    r"pass(?:word)?[ _-]?phrases?|phrase[ _-](?:de[ _-](?:passe|passage)|secr[eè]te)"
+    r"|frase[ _-](?:de[ _-](?:paso|contrase[ñn]a)|segreta)|wachtwoordzin"
+    r"|geheime[ _-]zin|passphrase|kennphrase", re.I)
 
 # Con "=" come separatore il riempitivo deve essere di parole note: in
 # `type="password" name="pwd"` la parola dopo "password" non introduce il valore.
@@ -456,7 +467,7 @@ _KNOWN_FILL = re.compile(r"^(?:[ \t]+(?:" + _FILL_WORDS + r"))*$", re.I)
 _PAREN_FILL = re.compile(r"^[ \t]*\([^()\n]{1,30}\)[ \t]*$")
 _XML_RX = re.compile(
     r"<(?P<kw>" + _KW_PASSWORD + r"|" + _KW_USERNAME + r"|" + _KW_SECRET_STRONG
-    + r")(?:\s[^<>\n]*)?>[ \t]*(?P<val>[^<\n]{1,160}?)[ \t]*</", re.I)
+    + r")(?:\s[^<>\n]*)?>[ \t]*(?P<val>[^<\n]+?)[ \t]*</", re.I)
 _NUMERIC = re.compile(r"^\d(?:[ \-]?\d){2,7}$")
 _DIGITS = re.compile(r"\d")
 
@@ -521,7 +532,7 @@ _PREFIX_RX = re.compile(
 
 _URI_RX = re.compile(
     r"(?<![\w.])(?P<scheme>[a-z][a-z0-9+.\-]{1,30})://"
-    r"(?P<user>[^\s/:@'\"<>]{1,64}):(?P<pass>[^\s@/'\"<>]{1,160})@", re.I)
+    r"(?P<user>[^\s/:@'\"<>]{1,64}):(?P<pass>[^\s@/'\"<>]+)@", re.I)
 
 _AUTH_RX = re.compile(
     r"(?<![\w\-])(?:(?:proxy-)?authorization[ \t]*[:=]?[ \t]*)?"
@@ -538,33 +549,40 @@ _COOKIE_RX = re.compile(r"(?<![\w\-])(?:cookie|set-cookie)[ \t]*:[ \t]*(?P<val>[
 _SEED_RX = re.compile(
     r"(?<![a-z])(?:(?:seed|mnemonic|recovery|backup)[ _\-]?(?:phrase|words?|frase|parole)"
     r"|frase[ _\-]?(?:seed|mnemonica|di[ _]recupero|segreta)"
-    r"|parole[ _\-]?(?:seed|di[ _]recupero|mnemoniche))(?![a-z])"
+    r"|parole[ _\-]?(?:seed|di[ _]recupero|mnemoniche)"
+    r"|phrase de r[ée]cup[ée]ration|phrase mn[ée]monique|wiederherstellungsphrase"
+    r"|frase de recuperaci[óo]n|frase semilla|herstelzin|herstelwoorden)(?![a-z])"
     r"[^\n]{0,24}?[:=]?[ \t]*\n?[ \t]*"
     r"(?P<val>(?:[a-z]{3,8}[ ,\n]+){11,23}[a-z]{3,8})(?![a-z])", re.I)
 _RECOVERY_RX = re.compile(
     r"(?<![a-z])(?:(?:recovery|backup)[ _\-]?codes?|codic[ei][ _\-]di[ _](?:recupero|backup"
-    r"|ripristino|emergenza))(?![a-z])[^\n]{0,20}?[:=]?[ \t]*"
-    r"(?P<val>[A-Za-z0-9]{4,}(?:[\- ][A-Za-z0-9]{4,}){1,7})(?![A-Za-z0-9])", re.I)
+    r"|ripristino|emergenza)|codes?[ _-]de[ _-](?:r[ée]cup[ée]ration|secours)"
+    r"|wiederherstellungscodes?|c[óo]digos?[ _-]de[ _-]recuperaci[óo]n"
+    r"|herstelcodes?|back-upcodes?)(?![a-z])[^\n]{0,20}?[:=]?[ \t]*"
+    r"(?P<val>[A-Za-z0-9]{4,}(?:-[A-Za-z0-9]{4,}|[ \t][0-9]{4,}){0,7})(?![A-Za-z0-9])", re.I)
+_RECOVERY_NEXT = re.compile(
+    r"[ \t]*(?:[,;]|\n)[ \t]*(?P<val>(?=[A-Za-z0-9-]*\d)"
+    r"[A-Za-z0-9]{4,}(?:-[A-Za-z0-9]{4,}){0,3})(?![\w-])")
 
 # Riga di comando.
 _CLI_RULES = [
     # curl -u user:pass, --user user:pass
-    (re.compile(r"(?<!\S)(?:-u|--user)(?:[ \t]+|=)[\"']?(?P<u>[^\s:\"']{1,64}):(?P<p>[^\s\"']{1,160})"),
+    (re.compile(r"(?<!\S)(?:-u|--user)(?:[ \t]+|=)[\"']?(?P<u>[^\s:\"']{1,64}):(?P<p>[^\s\"']+)"),
      ("u", "USERNAME"), ("p", "PASSWORD")),
     # smbclient -U user%pass
-    (re.compile(r"(?<!\S)-U[ \t]*[\"']?(?P<u>[^\s%\"']{1,64})%(?P<p>[^\s\"']{1,160})"),
+    (re.compile(r"(?<!\S)-U[ \t]*[\"']?(?P<u>[^\s%\"']{1,64})%(?P<p>[^\s\"']+)"),
      ("u", "USERNAME"), ("p", "PASSWORD")),
     # net use ... /user:DOM\utente password
-    (re.compile(r"/user:(?P<u>[^\s/]{1,64})[ \t]+(?P<p>[^\s/\-][^\s]{2,159})", re.I),
+    (re.compile(r"/user:(?P<u>[^\s/]{1,64})[ \t]+(?P<p>[^\s/\-][^\s]{2,})", re.I),
      ("u", "USERNAME"), ("p", "PASSWORD")),
     # -u user -p pass, -U user -P pass, --username user --password pass, -pPass attaccato
     (re.compile(r"(?<!\S)(?:-[uU]|--user(?:name)?)(?:[ \t]+|=)[\"']?(?P<u>[^\s\-\"'][^\s\"']{0,63})[\"']?"
                 r"[ \t]+(?P<pf>-[pP]|--pass(?:word|wd)?)(?P<psep>[ \t]+|=)?[\"']?(?P<p>[^\s\-\"'][^\s\"']{0,159})"),
      ("u", "USERNAME"), ("p", "PASSWORD")),
     # mysql ... -pSegreto (attaccato), sshpass -p segreto
-    (re.compile(r"\b(?:mysql\w*|mariadb\w*|mysqladmin|mysqldump)\b[^\n]*?[ \t]-p(?P<p>[^\s\-][^\s]{2,159})", re.I),
+    (re.compile(r"\b(?:mysql\w*|mariadb\w*|mysqladmin|mysqldump)\b[^\n]*?[ \t]-p(?P<p>[^\s\-][^\s]{2,})", re.I),
      ("p", "PASSWORD")),
-    (re.compile(r"\bsshpass[ \t]+-p[ \t]*[\"']?(?P<p>[^\s\"']{3,160})", re.I),
+    (re.compile(r"\bsshpass[ \t]+-p[ \t]*[\"']?(?P<p>[^\s\"']{3,})", re.I),
      ("p", "PASSWORD")),
 ]
 _PSQL_LINE = re.compile(r"\b(?:psql|pg_dump|pg_restore|pg_dumpall|createdb|dropdb)\b", re.I)
@@ -586,7 +604,7 @@ _PAIR_SEP = (r"(?P<ps>[ \t]*/[ \t]*|[ \t]*\|[ \t]*|[ \t]*[,;][ \t]*"
 _PAIR_RX = re.compile(
     r"(?<![^\W\d_])(?P<kw>" + _PAIR_KW + r")(?![^\W\d_])" + _FILL
     + r"(?:" + _STRICT_SEP + r"|" + _NATURAL_SEP + r"|[ \t]+)"
-    + r"(?P<u>" + _VAL_ID + r")" + _PAIR_SEP + r"(?P<p>[\"']?\S{3,160}[\"']?)", re.I)
+    + r"(?P<u>" + _VAL_ID + r")" + _PAIR_SEP + r"(?P<p>[\"']?\S{3,}[\"']?)", re.I)
 
 # "accedi con mrossi e Estate2024!", "logged in as jdoe"
 _LOGIN_VERBS = (
@@ -605,7 +623,7 @@ _LOGIN_RX = re.compile(
     r"[ \t]+(?P<u>" + _VAL_ID + r")"
     r"(?:(?P<ps>[ \t]*/[ \t]*|[ \t]*[,;][ \t]*|[ \t]+(?:e|and|&|con|with|pw|pwd|pass|password|passwd"
     r"|" + _lx.alt(_lx.PAIR_CONJ) + r")"
-    r"(?:[ \t]*:)?[ \t]+)(?P<p>[\"']?\S{3,160}[\"']?))?", re.I)
+    r"(?:[ \t]*:)?[ \t]+)(?P<p>[\"']?\S{3,}[\"']?))?", re.I)
 
 _SHORT_KW = frozenset({"pass", "pw", "psw", "pwd", "usr", "uid", "nick", "sig", "pat", "auth", "key", "keys"})
 _SPACE_USER_KW = re.compile(r"^(?:utente|user|username|user[ _\-]?name|nome[ _\-]?utente|login|user[ _\-]?id|userid|uid|utenza"
@@ -646,7 +664,10 @@ def _accept(cls, kw, kind, text, s, e, quoted, sep=""):
     """Il valore letto va bene per questa classe e questo tipo di separatore?
     Ritorna la label finale o None."""
     v = text[s:e]
-    if _bad_value(v, quoted):
+    explicit_word = (quoted and kind == "strict" and cls in {"PASSWORD", "SECRET"}
+                     and v.isalpha() and _is_stop(v))
+    if (not explicit_word and _is_placeholder(v, quoted)) or (_is_stop(v) and not (
+            quoted and kind == "strict" and cls in {"PASSWORD", "SECRET"})):
         return None
     kwl = kw.lower()
     if cls == "PIN":
@@ -755,13 +776,13 @@ def _ctx_hits(text):
                 m3 = _NUMERIC_AT.match(text, m2.end())
                 if m3:
                     got = (m3.start("v"), m3.end("v"), False)
-            elif cls == "PASSWORD" and "phrase" in kw.lower() and kind == "strict":
+            elif cls == "PASSWORD" and _PASSPHRASE_KW.fullmatch(kw) and kind == "strict":
                 # una passphrase è fatta di più parole: fino a fine riga/campo
                 m3 = _PHRASE_AT.match(text, m2.end())
                 if m3 and len(m3.group("v").split()) >= 2:
                     got = (m3.start("v"), m3.end("v"), False)
             if got is None:
-                got = _read_value(text, m2.end())
+                got = _read_value(text, m2.end(), strict=kind == "strict")
             if got is None:
                 continue
             s, e, quoted = got
@@ -887,6 +908,10 @@ def _format_hits(text):
     for m in _RECOVERY_RX.finditer(text):
         if _DIGITS.search(m.group("val")) or re.search(r"[A-Z]", m.group("val")):
             out.append((4, m.start("val"), m.end("val"), "SECRET", False))
+            pos = m.end("val")
+            while follow := _RECOVERY_NEXT.match(text, pos):
+                out.append((4, follow.start("val"), follow.end("val"), "SECRET", False))
+                pos = follow.end()
     return out
 
 
@@ -902,6 +927,7 @@ def _resolve(hits):
     return sorted(kept, key=lambda h: h[1])
 
 
+@normalized_detector
 def detect_credentials(text):
     """Entità USERNAME / PASSWORD / SECRET, nella forma di `detect_regex`."""
     if not text:

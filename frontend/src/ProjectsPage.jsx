@@ -215,8 +215,8 @@ export default function ProjectsPage() {
 
   return (
     <main className="min-w-0 flex-1 overflow-y-auto">
-      <div className="mx-auto flex w-full max-w-3xl flex-col gap-5 p-6">
-        <header className="flex items-center gap-2.5">
+      <div className="mx-auto flex w-full page-content max-w-3xl flex-col gap-5">
+        <header className="flex flex-wrap items-center gap-2.5">
           <h1 className="text-xl font-semibold tracking-tight">{t('title')}</h1>
           {projects.length > 0 && <Badge variant="secondary">{projects.length}</Badge>}
           <Button className="ml-auto gap-2" data-tour="new-project" onClick={() => setCreating(true)}>
@@ -239,7 +239,7 @@ export default function ProjectsPage() {
             </div>
 
             <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
-              <Table>
+              <Table className="mobile-card-table">
                 <TableHeader>
                   <TableRow className="hover:bg-transparent">
                     <TableHead>{t('table.project')}</TableHead>
@@ -261,17 +261,17 @@ export default function ProjectsPage() {
                           <span className="truncate font-medium" title={p.name}>{p.name}</span>
                         </div>
                       </TableCell>
-                      <TableCell className="text-right tabular-nums text-muted-foreground">
+                      <TableCell data-label={t('table.files')} className="text-right tabular-nums text-muted-foreground">
                         <span className="inline-flex items-center gap-1">
                           <Files className="size-3.5" /> {p.n_files}
                         </span>
                       </TableCell>
-                      <TableCell className="text-right tabular-nums text-muted-foreground">
+                      <TableCell data-label={t('table.chats')} className="text-right tabular-nums text-muted-foreground">
                         <span className="inline-flex items-center gap-1">
                           <MessageSquare className="size-3.5" /> {p.n_chats}
                         </span>
                       </TableCell>
-                      <TableCell className="whitespace-nowrap tabular-nums text-muted-foreground">
+                      <TableCell className="mobile-secondary whitespace-nowrap tabular-nums text-muted-foreground">
                         {fmtDate(p.updated_at, locale)}
                       </TableCell>
                       <TableCell className="text-right">

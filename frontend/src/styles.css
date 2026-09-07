@@ -59,7 +59,7 @@ code { background: #eef1f6; padding: 1px 5px; border-radius: 5px; font-size: 13p
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-.main { flex: 1; min-width: 0; padding: 16px; display: flex; flex-direction: column; }
+.main { flex: 1; min-width: 0; min-height: 0; padding: 16px; display: flex; flex-direction: column; overflow: auto; }
 
 /* testata delle pagine interne (link di ritorno alla lista) */
 .page-head { margin-bottom: 10px; flex: none; }
@@ -79,6 +79,13 @@ code { background: #eef1f6; padding: 1px 5px; border-radius: 5px; font-size: 13p
 .tabs button.on { background: #fff; color: var(--ink); box-shadow: 0 1px 3px rgba(20, 28, 46, 0.12); }
 
 .compare { flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 14px; min-height: 0; position: relative; }
+.compare-fixed { grid-template-rows: auto minmax(0, 1fr); row-gap: 0; }
+.pages-paired { grid-column: 1 / -1; }
+.viewer[data-fixed-layout="true"] .pages { overflow-anchor: none; }
+.page-pair {
+  flex: none; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: start; gap: 14px;
+}
 
 /* «non c'è niente da anonimizzare»: cartellino al centro del confronto, a
    cavallo delle due anteprime. Inerte ai click: sotto si può continuare a
@@ -101,7 +108,7 @@ code { background: #eef1f6; padding: 1px 5px; border-radius: 5px; font-size: 13p
   color: var(--muted); font-size: 17px; line-height: 1; cursor: pointer;
 }
 .nothing-anon-card button:hover { background: #eef1f6; color: var(--ink); }
-.pane { display: flex; flex-direction: column; min-height: 0; }
+.pane { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
 .pane h3 {
   font-size: 12.5px; text-transform: uppercase; letter-spacing: 0.04em;
   color: var(--muted); margin-bottom: 6px;
@@ -114,17 +121,17 @@ code { background: #eef1f6; padding: 1px 5px; border-radius: 5px; font-size: 13p
    vengono COMPRESSI per stare nell'altezza invece di sforare nello scroll.
    overflow visibile: i popover dei box devono poter sporgere dalla pagina. */
 .page {
-  flex: none; position: relative; border-radius: 6px;
+  flex: none; position: relative; border-radius: 6px; background: #fff;
   box-shadow: 0 1px 2px rgba(20, 28, 46, 0.10), 0 6px 18px rgba(20, 28, 46, 0.10);
 }
-.page img { display: block; width: 100%; height: auto; border-radius: 6px; user-select: none; }
+.page img { position: absolute; inset: 0; display: block; width: 100%; height: 100%; border-radius: 6px; user-select: none; }
 /* spazio vuoto in coda a ogni colonna, alto quanto la colonna: serve allo
    scroll sincronizzato (DocumentViewer.anchorScroll) per far seguire il lato
    con meno pagine fino all'ultima riga dell'altro */
 .pages-tail { flex: none; height: 100%; }
-.page-loading { width: 100%; aspect-ratio: 0.707; background: #fff; }
+.page-loading { position: absolute; inset: 0; background: #fff; border-radius: inherit; }
 .page-missing {
-  flex: none; background: #fff; border: 1px dashed var(--line); border-radius: 8px;
+  position: absolute; inset: 0; overflow: auto; background: #fff; border: 1px dashed var(--line); border-radius: 8px;
   padding: 30px 16px; text-align: center; color: var(--muted); font-size: 13.5px;
 }
 .page-num {
@@ -158,7 +165,18 @@ code { background: #eef1f6; padding: 1px 5px; border-radius: 5px; font-size: 13p
   box-shadow: 0 8px 22px rgba(20, 28, 46, 0.2); font-size: 12.5px; line-height: 1.45;
   text-align: left; white-space: normal;
 }
-.box:hover .boxpop { display: block; }
+.box:hover .boxpop, .box-active .boxpop, .box:focus-within .boxpop { display: block; }
+.box-active, .box:focus-within { z-index: 35; }
+.box:focus-visible { outline: 2px solid var(--brand); }
+.page-select { touch-action: none; }
+.page img { max-width: none; }
+.viewer-mobile-tools { display: none; }
+.file-download-menu { margin-left: auto; }
+.file-download-menu > summary { display: none; }
+.viewer-touch-tools, .viewer-zoom { display: flex; align-items: center; gap: 8px; }
+.viewer-touch-tools { justify-content: space-between; flex-wrap: wrap; }
+.viewer-zoom { margin-left: auto; font-size: 12px; }
+.viewer-zoom button { min-width: 44px; }
 .boxpop-map { word-break: break-word; }
 /* nota "Identificato dall'OCR": il valore viene dai pixel di un'immagine,
    non dal layer testuale — piccola e discreta sotto la coppia ph = valore */
@@ -278,6 +296,75 @@ button.small { padding: 3px 8px; font-size: 12px; }
 .confirm-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
 @keyframes pop-in { from { transform: scale(0.96); opacity: 0; } to { transform: none; opacity: 1; } }
 
-@media (max-width: 900px) {
-  .compare { grid-template-columns: 1fr; }
+@media (max-width: 1023px) {
+  .main { padding: 12px; }
+  .viewer { min-height: 280px; }
+  .compare { grid-template-columns: minmax(0, 1fr); }
+  .viewer-mobile-tools { display: flex; flex: none; flex-direction: column; gap: 6px; margin-bottom: 8px; }
+  .viewer-mobile-tools > .tabs { display: flex; }
+  .viewer-mobile-tools > .tabs button { flex: 1; }
+  .viewer[data-mobile-side="original"] .pane-anonymized,
+  .viewer[data-mobile-side="anonymized"] .pane-original { display: none; }
+  .pane h3 { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+  .pane-hint { display: none; }
+  .pane h3 .sealtoggle { float: none; margin-left: auto; }
+  .pages { padding: 8px; overflow: auto; overscroll-behavior: contain; }
+  .main button, .tabs button { min-height: 44px; }
+  .main input, .main select, .main textarea { font-size: 16px; }
+  .file-downloads { width: 100%; }
+  .file-download-menu { width: 100%; }
+  .file-download-menu > summary { display: list-item; cursor: pointer; min-height: 44px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); font-size: 13px; }
+  .file-download-menu[open] > summary { margin-bottom: 8px; }
+  .file-downloads button { flex: 1 1 120px; }
+  .nothing-anon-card { max-width: calc(100% - 16px); padding: 12px; }
+  .boxpop, .selpop, .colpop {
+    position: fixed;
+    inset: auto 12px max(12px, env(safe-area-inset-bottom)) !important;
+    z-index: 60;
+    min-width: 0;
+    max-width: none;
+    max-height: 50dvh;
+    overflow-y: auto;
+    overflow-wrap: anywhere;
+    border: 2px solid var(--primary);
+    box-shadow: 0 -6px 24px rgb(20 28 46 / 0.18), 0 12px 32px rgb(20 28 46 / 0.24);
+  }
+  /* On touch, an explicit tap owns the popup instead of sticky emulated hover. */
+  .box:not(.box-active) .boxpop { display: none; }
+  .main .selpop textarea.selpop-edit { font-size: 16px; }
+  .maptable, .maptable tbody, .maptable tr, .maptable td { display: block; }
+  .maptable thead { display: none; }
+  .maptable tr { padding: 8px 0; border-bottom: 1px solid var(--line); }
+  .maptable td { padding: 4px 0; border: 0; overflow-wrap: anywhere; white-space: normal; }
+  .maptable code { overflow-wrap: anywhere; }
+  .map-actions { text-align: left; }
+  .confirm-actions { flex-wrap: wrap; }
+}
+
+@media (pointer: coarse) and (min-width: 1024px) {
+  .viewer-mobile-tools { display: block; margin-bottom: 8px; }
+  .viewer-mobile-tools > .tabs { display: none; }
+}
+
+@media (max-width: 639px) {
+  .review-modal { border-radius: 0; }
+  .review-header { padding: max(8px, env(safe-area-inset-top)) 12px 8px; }
+  .review-steps { flex-basis: 100%; }
+  .review-footer { padding: 8px 12px max(8px, env(safe-area-inset-bottom)); }
+  .review-footer > .tabs { flex: 1 1 auto; }
+  .review-footer > span { display: none; }
+  .review-footer > button { flex: 1 1 auto; }
+  .review-footer > .tabs button { padding: 5px 8px; }
+  .review-header > span:nth-child(2) { font-size: 12px; }
+}
+
+@media (max-height: 500px) and (max-width: 1023px) {
+  .viewer-mobile-tools { flex-direction: row; flex-wrap: wrap; }
+  .viewer-mobile-tools > .tabs { flex: 1; }
+  .review-header { max-height: 22dvh; overflow: auto; }
+  .review-body .viewer { min-height: 160px; }
+}
+
+@media (min-width: 1024px) and (pointer: fine) {
+  .page, .page-pair { width: 100% !important; }
 }

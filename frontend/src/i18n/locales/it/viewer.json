@@ -1,4 +1,5 @@
 {
+  "mobile": {"select": "Seleziona area", "selecting": "Selezione attiva", "zoomIn": "Ingrandisci", "zoomOut": "Riduci"},
   "tab": {
     "compare": "Confronto",
     "mapping": "Mappa ({{count}})"
@@ -14,6 +15,7 @@
     "sealToggleHint": "Disegna un rettangolo nero che rimuove definitivamente il contenuto sottostante dal file anonimizzato"
   },
   "page": {
+    "loadError": "Impossibile caricare la pagina.",
     "alt": "pagina {{n}}",
     "originalGone": "Originale non disponibile (ricarica il file per rivederlo)."
   },

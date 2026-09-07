@@ -28,6 +28,9 @@ in chiaro senza alcun fallback.
 
 import re
 
+from .text_patterns import normalized_detector
+
+from . import formats
 from . import lexicon as _lx
 from .credentials import CREDENTIAL_LABELS, detect_credentials  # noqa: F401
 from .cyber import CYBER_LABELS, detect_cyber  # noqa: F401
@@ -40,7 +43,8 @@ def iban_ok(s):
     # Si normalizzano gli stessi separatori che la regex ammette: spazio (anche
     # non-breaking, e gli a-capo del testo estratto da un PDF), punto, trattino.
     s = re.sub(r"[\s.\-]", "", s).upper()
-    if not (15 <= len(s) <= 34):
+    if (not re.fullmatch(r"[A-Z]{2}[0-9]{2}[A-Z0-9]+", s)
+            or IBAN_LEN.get(s[:2]) != len(s)):
         return False
     r = s[4:] + s[:4]
     try:
@@ -52,7 +56,7 @@ def iban_ok(s):
 
 def piva_ok(p):
     p = re.sub(r"\D", "", p)
-    if len(p) != 11:
+    if len(p) != 11 or len(set(p)) == 1:
         return False
     t = 0
     for i, c in enumerate(map(int, p[:10])):
@@ -101,7 +105,7 @@ def _luhn(d):
 
 def luhn_ok(s):
     d = re.sub(r"\D", "", s)
-    return 13 <= len(d) <= 19 and _luhn(d)
+    return 13 <= len(d) <= 19 and len(set(d)) > 1 and _luhn(d)
 
 
 def card_ok(s):
@@ -119,7 +123,7 @@ def card_ok(s):
 # trattino) tra una cifra e l'altra, che inizia e finisce su una cifra.
 # Condivisa tra la rete regex (voce CREDITCARDNUMBER in DETECTORS) e il
 # post-filtro sull'output del modello (core._clean_card).
-_CARD_RE = re.compile(r"(?<!\d)\d(?:[ .\-]?\d){12,18}(?!\d)")
+_CARD_RE = re.compile(r"(?<!\d)\d(?:[ .\-\u00a0\u202f]?\d){12,18}(?!\d)")
 
 
 def scan_card(text):
@@ -284,13 +288,20 @@ EU_VAT = {
 # di troppo il fullmatch fallisce, ed è giusto così: "DE1234567890" non è
 # una partita IVA tedesca a cui manca un pezzo, è un altro numero.
 #
-# Prefisso in MAIUSCOLO obbligatorio (niente IGNORECASE): metà dei prefissi
-# sono parole italiane correntissime - SE, SI, NO, IT, CHE - e in minuscolo
-# "che 123456789" diventerebbe una partita IVA svizzera.
+# Lowercase country prefixes require an explicit VAT cue: SE, SI, NO, IT
+# and CHE also occur in ordinary prose. Printed groups stay on one line.
 _VAT_CAND = re.compile(
-    r"(?<![A-Za-z0-9])(?P<cc>"
-    + "|".join(sorted(EU_VAT, key=len, reverse=True))
-    + r")(?P<sep>[\s.\-]?)(?P<body>[A-Z0-9](?:[A-Z0-9.\-]*[A-Z0-9])?)(?![A-Za-z0-9])")
+    r"(?<![\w])(?P<cc>" + "|".join(sorted(EU_VAT, key=len, reverse=True))
+    + r")(?=[A-Za-z0-9 .\-])", re.I)
+_VAT_GROUP = re.compile(r"[A-Za-z0-9]+(?:[.\-][A-Za-z0-9]+)*")
+_VAT_SEP = re.compile(r"[ \t\u00a0\u202f.\-]{0,3}")
+_VAT_MAX = {
+    "AT": 9, "BE": 10, "BG": 10, "CY": 9, "CZ": 10, "DE": 9, "DK": 8,
+    "EE": 9, "EL": 9, "GR": 9, "ES": 9, "FI": 8, "FR": 11, "HR": 11,
+    "HU": 8, "IE": 9, "IT": 11, "LT": 12, "LU": 8, "LV": 11, "MT": 8,
+    "NL": 12, "PL": 10, "PT": 9, "RO": 10, "SE": 12, "SI": 8, "SK": 10,
+    "GB": 12, "CHE": 9, "NO": 9,
+}
 
 # Ancora lessicale: l'etichetta che precede il numero. Vale come prova
 # alternativa al checksum, in italiano e nelle lingue dei paesi in tabella.
@@ -306,26 +317,45 @@ def has_vat_cue(text, i):
     return bool(_VAT_CUE.search(text[max(0, i - _VAT_CUE_BACK):i]))
 
 
+@normalized_detector
 def detect_eu_vat(text):
     """Partite IVA europee scritte col prefisso del paese ("DE811569869")."""
     ents = []
     for m in _VAT_CAND.finditer(text):
-        shape, validator = EU_VAT[m.group("cc")]
-        body = re.sub(r"[.\-]", "", m.group("body"))
+        cc = m.group("cc").upper()
+        cue = has_vat_cue(text, m.start())
+        if m.group("cc") != cc and not cue:
+            continue
+        shape, validator = EU_VAT[cc]
+        pos = _VAT_SEP.match(text, m.end()).end()
+        sep = text[m.end():pos]
+        group = _VAT_GROUP.match(text, pos)
+        if not group:
+            continue
+        body = re.sub(r"[.\-]", "", group.group()).upper()
+        end = group.end()
+        # Extend only over short printing gaps followed by another numeric
+        # group (or the Dutch Bxx suffix), never over a following prose word.
+        while len(body) < _VAT_MAX[cc]:
+            gap = _VAT_SEP.match(text, end)
+            if gap.end() == end:
+                break
+            following = _VAT_GROUP.match(text, gap.end())
+            if not following or not re.match(r"[0-9]|B[0-9]", following.group(), re.I):
+                break
+            extra = re.sub(r"[.\-]", "", following.group()).upper()
+            if len(body + extra) > _VAT_MAX[cc]:
+                break
+            body += extra
+            end = following.end()
         if not re.fullmatch(shape, body):
             continue
         ok = bool(validator(body)) if validator else False
         if validator and not ok:
-            continue                   # checksum implementato e fallito: non è una VAT
-        # Prefisso separato da uno SPAZIO: è la forma che collide con la prosa
-        # ("SE 1234567801" è "se" più un numero prima che una VAT svedese).
-        # Lì la forma da sola non basta più: serve il checksum o l'etichetta.
-        # Punto e trattino no: sono separatori di stampa, non spaziatura di
-        # frase - la Svizzera scrive "CHE-123.456.789" e nessuno scrive
-        # "che-123456789" in prosa.
-        if m.group("sep").isspace() and not (ok or has_vat_cue(text, m.start())):
             continue
-        ents.append({"label": "PIVA", "start": m.start(), "end": m.end(),
+        if sep.isspace() and not (ok or cue):
+            continue
+        ents.append({"label": "PIVA", "start": m.start(), "end": end,
                      "score": 1.0 if ok else 0.9, "validated": ok, "source": "regex"})
     return ents
 
@@ -341,7 +371,7 @@ DETECTORS = [
      # Il confine sinistro non serve solo alla correttezza: senza, su una lunga
      # parola ASCII priva di "@" il quantificatore riparte da ogni carattere e
      # rende la ricerca quadratica.
-     re.compile(r"(?<![A-Za-z0-9._%+\-])[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}"),
+     formats.EMAIL_RX,
      None, True),
     ("CF",
      re.compile(r"\b[A-Za-z]{6}\d{2}[A-Za-z]\d{2}[A-Za-z]\d{3}[A-Za-z]\b"),
@@ -359,7 +389,7 @@ DETECTORS = [
                 r"[\dLMNPQRSTUVlmnpqrstuv]{2}[A-Za-z]"
                 r"[\dLMNPQRSTUVlmnpqrstuv]{3}[A-Za-z]\b"),
      cf_ok, True),
-    # IBAN, forma compatta: copre qualsiasi paese, anche fuori dal registro ISO.
+    # Compact IBANs use the same country and length table as printed IBANs.
     # Il formato di stampa a gruppi NON è una regex ma `detect_iban()` qui sotto,
     # perché per sapere dove finisce serve la lunghezza prevista per il paese.
     ("IBAN",
@@ -380,8 +410,7 @@ DETECTORS = [
     # che conosce i piani di numerazione nazionali e gira per ultimo in
     # detect_regex (un numero dentro un IBAN o una carta non è un telefono).
     ("AMOUNT",
-     re.compile(r"(?:€|EUR|euro)\s?\d{1,3}(?:[.\s]\d{3})*(?:,\d{2})?"
-                r"|\d{1,3}(?:\.\d{3})*,\d{2}\s?(?:€|EUR|euro)", re.IGNORECASE),
+     formats.AMOUNT_RX,
      None, True),
     # il trattino è un separatore quanto lo spazio ("AB-123-CD" nei moduli e negli
     # export): senza, la targa scritta così non viene vista da nessuno dei due lati,
@@ -398,18 +427,7 @@ DETECTORS = [
     # "p.iva" non matcha ("iva" non è un TLD) e i falsi positivi crollano.
     # Prezzo del compromesso: un dominio con TLD esotico resta in chiaro.
     ("URL",
-     re.compile(r"(?:https?|ftp)://[^\s<>\"']+"
-                r"|www\.[A-Za-z0-9\-._~%]+\.[A-Za-z]{2,}(?:/[^\s<>\"']*)?"
-                r"|\b(?:[A-Za-z0-9](?:[A-Za-z0-9\-]*[A-Za-z0-9])?\.)+"
-                r"(?:" + _lx.alt(_lx.PUBLIC_TLD_LOOSE) + r")"
-                r"\b(?:/[^\s<>\"']*)?"
-                # ccTLD e TLD di due lettere (fr, de, es, nl, uk, co.uk...): davanti
-                # un'etichetta di almeno tre caratteri e suffisso minuscolo, altrimenti
-                # "p.es.", "i.e.", "u.a." e le sigle scritte col punto diventano domini
-                r"|\b(?:[A-Za-z0-9](?:[A-Za-z0-9\-]*[A-Za-z0-9])?\.)*"
-                r"[A-Za-z0-9][A-Za-z0-9\-]+[A-Za-z0-9]\."
-                r"(?-i:(?:" + _lx.alt([t.replace(".", r"\.") for t in _lx.PUBLIC_TLD_2ND + _lx.PUBLIC_TLD_STRICT])
-                + r"))\b(?:/[^\s<>\"']*)?", re.IGNORECASE),
+     formats.URL_RX,
      None, True),
     # DOCID: il codice di un atto è scritto sempre dopo la sua sigla ("R.G. 1234/2024",
     # "Prot. 123/2024", "Rep. 45"). È la sigla a renderlo riconoscibile: il numero da
@@ -421,20 +439,17 @@ DETECTORS = [
     # "protocollo" per esteso: "Prot. n. 456/2024" è il caso più comune di tutti.
     ("DOCID",
      re.compile(r"\b(?:R\.?G\.?\s*N\.?R\.?|R\.?G\.?|RG|Prot\.?|protocollo"
-                r"|Rep\.?|repertorio)"
+                r"|Rep\.?|repertorio|Case[ \t]+No\.?|file[ \t]+number"
+                r"|Aktenzeichen|R[ée]f[ée]rence[ \t]+(?:du[ \t]+)?dossier"
+                r"|Expediente|Zaaknummer)"
                 r"(?:\s*(?:n\.?|num\.?|nro\.?))?"
                 r"\s*\d{1,8}(?:[/\-]\d{2,4})?\b",
                 re.IGNORECASE),
      None, True),
-    # Date numeriche: forma specifica ma SENZA validatore possibile (una data non ha
-    # checksum). Sta in SOFT_REGEX_LABELS -> in fusione non eredita la priorità della
-    # rete regex, quindi il modello può sovrascriverla: "06-11-2014" dentro un
-    # riferimento di laboratorio resta un falso positivo accettabile, non un verdetto.
-    ("DATE",
-     re.compile(r"(?<!\d)(?:0?[1-9]|[12]\d|3[01])[/.\-]"
-                r"(?:0?[1-9]|1[0-2])[/.\-](?:19|20)\d{2}"
-                r"(?:\s+\d{1,2}[:.]\d{2})?(?!\d)"),
-     None, True),
+    # Calendar checks do not establish that a token is semantically a date.
+    # Keep dates soft so stronger model evidence can override them.
+    ("DATE", formats.DATE_RX, None, True),
+    ("DATE", formats.NAMED_DATE_RX, None, True),
 ]
 
 # Label della rete regex SENZA validatore forte: la forma da sola non basta a dire
@@ -453,18 +468,15 @@ SOFT_REGEX_LABELS = {"DATE", "USERNAME"}
 # (devices.py) restano FUORI apposta: un nome di macchina e un numero di serie
 # sono case-insensitive (SRV01 e srv01 devono avere lo stesso placeholder) e la
 # punteggiatura ai bordi non gli appartiene.
-EXACT_SPAN_LABELS = frozenset(CREDENTIAL_LABELS | CYBER_LABELS)
+# URL paths and email local parts also preserve case and punctuation.
+EXACT_SPAN_LABELS = frozenset(CREDENTIAL_LABELS | CYBER_LABELS | {"URL", "EMAIL"})
 
 # Gruppi che la UI mostra sotto un'unica voce richiudibile (CategoriesPicker,
 # AnonTags), esposti da /api/tags: l'appartenenza la decide il backend, così un
 # tag nuovo compare al posto giusto senza toccare il frontend. Per ora un solo
 # gruppo, «Cybersecurity»: credenziali + identificativi tecnici + nomi di macchina
 # e identificativi di dispositivo.
-TAG_GROUPS = {"cyber": sorted(EXACT_SPAN_LABELS | DEVICE_LABELS)}
-
-# Punteggiatura che chiude la frase e non fa parte dell'URL: "vedi https://x.it/pagina."
-_URL_TRAIL = ".,;:!?)]}»\"'"
-
+TAG_GROUPS = {"cyber": sorted(CREDENTIAL_LABELS | CYBER_LABELS | DEVICE_LABELS)}
 
 # ISO 13616: lunghezza dell'IBAN per paese. Serve a sapere DOVE finisce quando è
 # scritto a gruppi: indovinare il confine significa inghiottire le parole vicine o
@@ -566,6 +578,7 @@ def detect_iban(text):
     return [e for e in ents if e["end"] > e["start"]]
 
 
+@normalized_detector
 def detect_regex(text):
     """Entità della rete regex. validated=True solo quando il checksum passa."""
     national = detect_national_ids(text)
@@ -581,11 +594,15 @@ def detect_regex(text):
             if label in ("PIVA", "CREDITCARDNUMBER", "CF") \
                     and any(start < n["end"] and end > n["start"] for n in national):
                 continue
-            if label == "URL":
-                while end > start and text[end - 1] in _URL_TRAIL:
-                    end -= 1
-                if end <= start:
-                    continue
+            value = m.group()
+            if label in {"URL", "EMAIL"}:
+                value = formats.trim_url(value)
+                end = start + len(value)
+            shape_check = {"EMAIL": formats.email_ok, "URL": formats.url_ok,
+                           "AMOUNT": formats.amount_ok,
+                           "DATE": lambda v: formats.date_ok(v) or formats.named_date_ok(v)}.get(label)
+            if shape_check and (not value or not shape_check(value)):
+                continue
             ok = validator(m.group(0)) if validator else False
             if validator and strict and not ok:
                 continue
@@ -602,6 +619,13 @@ def detect_regex(text):
     # numerazione lo ammetterebbe. Si bloccano anche i candidati IBAN col
     # checksum rotto (sigla + cifre: mai un telefono); i candidati carta NON
     # validati no, perché "0033 6 12 34 56 78" ha quattordici cifre come una carta.
+    for match in formats.PLATE_RX.finditer(text):
+        value = match.group("value")
+        if "-" in value and " " in value and len(re.sub(r"[ -]", "", value)) > 8:
+            continue
+        ents.append({"label": "TARGA", "start": match.start("value"),
+                     "end": match.end("value"), "score": 0.9,
+                     "validated": False, "source": "regex"})
     blocked = [(e["start"], e["end"]) for e in ents]
     blocked += [(s, e) for s, e, _ in scan_iban(text)]
     ents += detect_phones(text, blocked)

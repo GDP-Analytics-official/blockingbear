@@ -48,7 +48,7 @@ from .engine.core import _norm
 from .engine.pdf import render_page_png, spreadsheet_columns, text_in_rect
 from .engine.pdf_export import PdfError
 from .engine.xlsx import XlsxError, anonymize_xlsx_column, column_values, \
-    sheet_names
+    sheet_names, sheet_name_aliases
 from .openrouter import briefing
 
 PROJECTS_DIR = DATA_DIR / "projects"
@@ -739,10 +739,18 @@ def columns_layout(pf):
     names = _sheet_names(pf)
     if not names:
         return out
+    aliases = {}
+    if protected_path(pf).is_file():
+        aliases = sheet_name_aliases(original_path(pf).read_bytes(),
+                                     protected_path(pf).read_bytes())
     for source in ("original", "anonymized"):
         p = preview_path(pf, source)
         if p.is_file():
-            out[source] = spreadsheet_columns(p.read_bytes(), names)
+            displayed = aliases if source == "anonymized" and aliases else names
+            out[source] = spreadsheet_columns(p.read_bytes(), displayed)
+            if source == "anonymized":
+                for page in out[source].values():
+                    page["sheet"] = aliases.get(page["sheet"], page["sheet"])
     return out
 
 
@@ -972,15 +980,24 @@ def confirm(session, project, pf):
         skip = ca.excluded_groups(defaults["excluded_tags"])
         try:
             text = chat_staging._full_text(ppath.read_bytes(), file_ext(pf))
-        except Exception:
-            text = ""
+        except Exception as exc:
+            if file_ext(pf) == ".xlsx":
+                raise ProjectFileError(409,
+                    "Cannot verify the complete protected workbook; reprocess it.") from exc
+            text = ""  # Scanned formats are checked through the OCR corpus below.
         card = pf.model_briefing_json or ""
         # la copia protetta (testo estraibile) contro TUTTO il registro, più
         # il controllo di allineamento: il secondo è l'unico che vede dentro
         # le scansioni, dove il testo della copia protetta è fatto di pixel e
         # il primo non trova mai niente. Qui l'utente aspetta un'azione che ha
         # chiesto lui: si estrae senza tetto.
-        leaks = (ca.known_surface_leaks(session, project.id, text,
+        xlsx_leaks = []
+        if file_ext(pf) == ".xlsx":
+            from .engine.xlsx import known_xlsx_leaks
+            mapping = ca.conversation_mapping(session, project.id,
+                include_aliases=True, exclude=skip)
+            xlsx_leaks = known_xlsx_leaks(ppath.read_bytes(), mapping)
+        leaks = (xlsx_leaks or ca.known_surface_leaks(session, project.id, text,
                                         exclude=skip)
                  or ca.known_surface_leaks(session, project.id, card,
                                            exclude=skip)

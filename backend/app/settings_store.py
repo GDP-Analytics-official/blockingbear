@@ -25,6 +25,7 @@ manca, mostra questi — un parametro nuovo compare comunque, mai vuoto.
 
 import json
 import re
+import unicodedata
 
 from . import db
 from .db import Setting
@@ -299,7 +300,7 @@ def term_key(raw):
     lo stesso testo potrebbe entrare due volte con due tag diversi e
     detect_custom produrrebbe due candidati sullo stesso span: quale dei due
     vince diventerebbe un dettaglio dell'ordinamento."""
-    return re.sub(r"\s+", " ", str(raw or "")).strip().casefold()
+    return " ".join(unicodedata.normalize("NFC", str(raw or "")).split()).casefold()
 
 
 def clean_terms(raw):

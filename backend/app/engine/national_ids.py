@@ -40,6 +40,8 @@ Come detectors.py il modulo lavora su stringhe, senza modello.
 
 import re
 
+from .text_patterns import normalized_detector
+
 
 # ---------------------------------------------------------------------------
 # Checksum
@@ -140,7 +142,7 @@ def nl_elfproef_ok(d):
     """Paesi Bassi, BSN e RSIN: prova dell'undici con pesi 9..2 e -1 sull'ultima."""
     if len(d) == 8:
         d = "0" + d
-    if len(d) != 9 or not d.isdigit():
+    if len(d) != 9 or not d.isdigit() or len(set(d)) == 1:
         return False
     s = sum(int(c) * w for c, w in zip(d, (9, 8, 7, 6, 5, 4, 3, 2, -1)))
     return s % 11 == 0
@@ -205,7 +207,7 @@ def at_svnr_ok(d):
 # ---------------------------------------------------------------------------
 # Etichette (cue) davanti al numero
 # ---------------------------------------------------------------------------
-CUE_BACK = 40                          # caratteri di contesto a sinistra
+CUE_BACK = 128                          # caratteri di contesto a sinistra
 
 # fra l'etichetta e il numero: separatori, "n°", "nr.", "de", "is"...
 _CUE_TAIL = re.compile(
@@ -292,6 +294,12 @@ def _never(raw):
 
 
 RULES = [
+    # US SSN: explicit cue required; format checks do not prove issuance.
+    # https://secure.ssa.gov/poms.nsf/lnx/0110201035
+    ("CF", "US_SSN",
+     re.compile(_B + r"(?P<v>(?!000|666|9)[0-9]{3}(?P<sep>[- ]?)"
+                r"(?!00)[0-9]{2}(?P=sep)(?!0000)[0-9]{4})" + _E),
+     None, _cue(r"SSN|social[ \t]+security(?:[ \t]+number)?"), _always),
     # --- Francia ---
     ("CF", "FR_NIR",
      re.compile(_B + r"(?P<v>[12]" + _SEP + r"\d{2}" + _SEP + r"\d{2}" + _SEP + r"(?:\d{2}|2[AB])" + _SEP
@@ -317,10 +325,10 @@ RULES = [
      None, CUE_DE_STEUERNUMMER, _always),
     # --- Spagna ---
     ("CF", "ES_NIF",
-     re.compile(_B + r"(?P<v>(?:\d{8}|\d{2}\.\d{3}\.\d{3})[ .\-]?[A-Z]|[XYZ][ .\-]?\d{7}[ .\-]?[A-Z])" + _E),
+     re.compile(_B + r"(?P<v>(?:\d{8}|\d{2}\.\d{3}\.\d{3})[ .\-\u00a0\u202f]?[A-Z]|[XYZ][ .\-\u00a0\u202f]?\d{7}[ .\-\u00a0\u202f]?[A-Z])" + _E),
      es_id_ok, CUE_ES_NIF, _never),
     ("PIVA", "ES_CIF",
-     re.compile(_B + r"(?P<v>[ABCDEFGHJNPQRSUVW][ .\-]?\d{7}[ .\-]?[0-9A-J])" + _E),
+     re.compile(_B + r"(?P<v>[ABCDEFGHJNPQRSUVW][ .\-\u00a0\u202f]?\d{7}[ .\-\u00a0\u202f]?[0-9A-J])" + _E),
      es_id_ok, CUE_ES_CIF, _always),
     ("CF", "ES_NSS",
      re.compile(_B + r"(?P<v>\d{2}[ /\-\u00a0\u202f]?\d{8}[ /\-\u00a0\u202f]?\d{2})" + _E),
@@ -341,7 +349,7 @@ RULES = [
                 r"(?:" + _HSP + r")?\d{2}(?:" + _HSP + r")?\d{2}(?:" + _HSP
                 + r")?\d{2}(?:" + _HSP + r")?[A-D])"
                 + _E),
-     None, CUE_UK_NINO, lambda raw: " " not in raw),
+     None, CUE_UK_NINO, lambda raw: not any(c.isspace() for c in raw)),
     ("CF", "UK_UTR",
      re.compile(_B + r"(?P<v>\d{5}(?:" + _HSP + r")?\d{5})" + _E),
      uk_utr_ok, CUE_UK_UTR, _always),
@@ -366,6 +374,10 @@ RULES = [
 ]
 
 
+RULES = [(label, name, re.compile(rx.pattern, rx.flags | re.I), validator, cue, needed)
+         for label, name, rx, validator, cue, needed in RULES]
+
+
 def _norm(raw):
     return re.sub(r"[ .\-/\u00a0\u202f]", "", raw).upper()
 
@@ -388,6 +400,7 @@ def scan_national_ids(text):
     return out
 
 
+@normalized_detector
 def detect_national_ids(text):
     """Entità CF / PIVA estere, nella forma di `detect_regex`. Sovrapposizioni:
     vince il validato, poi il più lungo."""

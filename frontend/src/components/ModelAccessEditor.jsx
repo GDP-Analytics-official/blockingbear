@@ -62,7 +62,7 @@ export default function ModelAccessEditor({ models, value, onChange, locked = ''
 
   return (
     <div className="flex flex-col gap-3">
-      <select className="h-9 w-fit rounded-md border border-input bg-card px-3 text-sm"
+      <select className="h-9 w-fit min-w-0 max-w-full rounded-md border border-input bg-card px-3 text-sm"
               value={enabled ? 'selected' : 'all'}
               onChange={(e) => onChange({ enabled: e.target.value === 'selected',
                                           models: value?.models || [] })}>

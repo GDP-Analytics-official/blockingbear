@@ -95,9 +95,10 @@ export default function ModelSelector({ models, value, onChange, disabled, inlin
   }, [open])
 
   return (
-    <div className={inline ? 'contents' : 'relative'} ref={boxRef}>
+    <div className={inline ? 'contents' : 'relative min-w-0 max-w-full'} ref={boxRef}>
       <Button variant="outline" size="sm" disabled={disabled}
-              className="max-w-[320px] justify-between gap-2"
+              className="w-full max-w-[320px] justify-between gap-2"
+              aria-expanded={open} aria-label={t('selector.placeholder')}
               onClick={() => setOpen((o) => !o)}>
         <span className="truncate">
           {selected ? selected.name : t('selector.placeholder')}
@@ -134,7 +135,7 @@ export default function ModelSelector({ models, value, onChange, disabled, inlin
               <li key={m.id}>
                 <button
                   className={cn(
-                    'flex w-full items-start gap-2 px-2.5 py-1.5 text-left hover:bg-accent',
+                    'touch-control flex w-full items-start gap-2 px-2.5 py-1.5 text-left hover:bg-accent',
                     m.id === value && 'bg-accent'
                   )}
                   onClick={() => { onChange(m.id); setOpen(false); setQuery('') }}

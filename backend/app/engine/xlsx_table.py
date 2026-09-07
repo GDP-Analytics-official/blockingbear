@@ -27,6 +27,7 @@ lentezza (si ricade sul percorso classico). Sbagliare in modo conservativo.
 
 import re
 
+from .detectors import EXACT_SPAN_LABELS
 from .core import _norm
 from .pdf_export import _too_noisy, _value_pattern
 
@@ -220,13 +221,17 @@ def classify_columns(header, sampled, entities, coverage_pct):
 
 
 def column_uniques(data, header):
-    """{col: [valori unici (per _norm), nell'ordine di prima comparsa]}."""
+    """Distinct raw cell values in first-seen order.
+
+    Labels are not known yet. Folding here could discard a second password
+    before detection; ordinary text is still deduplicated by the allocator.
+    """
     out = {c: [] for c in header}
     seen = {c: set() for c in header}
     for _ri, cells in data:
         for c, txt, _is_text in cells:
             if c in out:
-                nv = _norm(txt)
+                nv = txt
                 if nv and nv not in seen[c]:
                     seen[c].add(nv)
                     out[c].append(txt)
@@ -246,6 +251,10 @@ def usable_value(v):
 _PH_RE = re.compile(r"^\[(.+)_(\d+)\]$")
 
 
+def _allocation_key(label, value):
+    return (label, value) if label in EXACT_SPAN_LABELS else (None, _norm(value))
+
+
 class PlaceholderAllocator:
     """Prosegue i contatori della mappa del modello ([FULLNAME_3] -> il
     prossimo FULLNAME è _4) e deduplica per VALORE normalizzato: lo stesso
@@ -262,7 +271,7 @@ class PlaceholderAllocator:
             if m:
                 label, n = m.group(1), int(m.group(2))
                 self.counters[label] = max(self.counters.get(label, 0), n)
-            self.by_value.setdefault(_norm(val), ph)
+            self.by_value.setdefault(_allocation_key(m.group(1) if m else "", val), ph)
 
     def forget(self, ph):
         """Toglie un placeholder dalla mappa e ritorna il suo valore (None se
@@ -272,7 +281,8 @@ class PlaceholderAllocator:
         [TAG_n] renderebbero ambigua la deanonimizzazione."""
         value = self.mapping.pop(ph, None)
         if value is not None:
-            nv = _norm(value)
+            label = ph.strip("[]").rsplit("_", 1)[0]
+            nv = _allocation_key(label, value)
             if self.by_value.get(nv) == ph:
                 del self.by_value[nv]
         return value
@@ -280,7 +290,7 @@ class PlaceholderAllocator:
     def get(self, label, value):
         """(placeholder, creato_adesso). Riusa quello esistente se il valore
         è già in mappa (anche sotto un'altra label: una stringa è una)."""
-        nv = _norm(value)
+        nv = _allocation_key(label, value)
         ph = self.by_value.get(nv)
         if ph is not None:
             return ph, False

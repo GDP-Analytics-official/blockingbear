@@ -607,9 +607,9 @@ def boxes_for(cache, mapping):
 
     extra = []
     for ph, val in mapping.items():
-        if not isinstance(val, str) or _too_noisy(val):
+        if not isinstance(val, str) or _too_noisy(val, ph):
             continue
-        pat = _value_pattern(val)
+        pat = _value_pattern(val, ph)
         if pat:
             extra.append((ph, pat))
 
@@ -722,9 +722,9 @@ def redacted_lines(cache, mapping):
 
     extra = []
     for ph, val in mapping.items():
-        if not isinstance(val, str) or _too_noisy(val):
+        if not isinstance(val, str) or _too_noisy(val, ph):
             continue
-        pat = _value_pattern(val)
+        pat = _value_pattern(val, ph)
         if pat:
             extra.append((ph, pat))
 

@@ -54,7 +54,7 @@ function HelpTip({ text, side = 'right' }) {
         <CircleHelp className="size-3.5" />
       </button>
       <span role="tooltip"
-            className={cn('pointer-events-none absolute top-full z-20 mt-1.5 hidden w-72 rounded-md border border-border bg-popover p-2.5 text-xs font-normal normal-case text-popover-foreground shadow-md group-hover:block group-focus-within:block',
+            className={cn('pointer-events-none absolute top-full z-20 mt-1.5 hidden w-60 max-w-[80vw] rounded-md border border-border bg-popover p-2.5 text-xs font-normal normal-case text-popover-foreground shadow-md group-hover:block group-focus-within:block',
                           side === 'left' ? 'right-0' : 'left-0')}>
         {text}
       </span>
@@ -81,19 +81,19 @@ export function TermsEditor({ terms, tags, onChange, datalistId = 'anon-tag-list
           <div className="flex flex-1 items-center gap-1">
             {t('terms.textLabel')}<HelpTip text={t('terms.textHelp')} />
           </div>
-          <div className="flex w-40 shrink-0 items-center gap-1">
+          <div className="flex w-24 sm:w-40 shrink-0 items-center gap-1">
             {t('terms.tagLabel')}<HelpTip text={t('terms.tagHelp')} side="left" />
           </div>
           <div className="w-7 shrink-0" />
         </div>
         {/* `term`, non `t`: `t` è la funzione di traduzione di i18next */}
         {terms.map((term, i) => (
-          <div key={i} className="flex items-center gap-2">
-            <Input type="text" placeholder={t('terms.textPlaceholder')} value={term.text}
+          <div key={i} className="term-row flex items-center gap-2">
+            <Input type="text" aria-label={t('terms.textLabel')} placeholder={t('terms.textPlaceholder')} value={term.text}
                    onChange={(e) => setTerm(i, { text: e.target.value })} />
-            <Input type="text" placeholder={t('terms.tagPlaceholder')}
+            <Input type="text" aria-label={t('terms.tagLabel')} placeholder={t('terms.tagPlaceholder')}
                    list={datalistId} value={term.tag}
-                   className="w-40 shrink-0 font-mono text-xs uppercase"
+                   className="w-24 sm:w-40 shrink-0 font-mono text-xs uppercase"
                    onChange={(e) => setTerm(i, {
                      tag: e.target.value.toUpperCase().replace(/[^A-Z0-9_]/g, ''),
                    })} />
@@ -142,15 +142,15 @@ export function CategoriesPicker({ tags, groups = null, excluded, onChange, defa
 
   const row = (tag) => (
     <label key={tag}
-           className="flex cursor-pointer select-none items-center gap-2 rounded-md px-1.5 py-1 hover:bg-accent">
+           className="touch-control flex cursor-pointer select-none items-center gap-2 rounded-md px-1.5 py-1 hover:bg-accent">
       <Checkbox checked={!off.has(tag)} onCheckedChange={() => toggleTag(tag)} />
-      <span className="font-mono text-xs">{tag}</span>
+      <span className="min-w-0 break-all font-mono text-xs">{tag}</span>
     </label>
   )
 
   return (
     <section>
-      <div className="mb-2 flex items-center justify-between gap-2">
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
         <h4 className="text-sm font-semibold">{t('categories.title')}</h4>
         <div className="flex gap-1">
           {defaults !== null && (

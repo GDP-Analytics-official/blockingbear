@@ -25,7 +25,7 @@ const AlertDialogContent = React.forwardRef(({ className, ...props }, ref) => (
     <AlertDialogPrimitive.Content
       ref={ref}
       className={cn(
-        'fixed left-1/2 top-1/2 z-50 grid w-full max-w-md -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl border border-border bg-card p-6 shadow-2xl',
+        'fixed left-1/2 top-1/2 z-50 grid w-[calc(100%-1.5rem)] max-w-md -translate-x-1/2 -translate-y-1/2 gap-4 max-h-[calc(100dvh-1.5rem)] overflow-y-auto overscroll-contain rounded-xl border border-border bg-card p-4 sm:p-6 shadow-2xl',
         className
       )}
       {...props}
@@ -39,7 +39,7 @@ function AlertDialogHeader({ className, ...props }) {
 }
 
 function AlertDialogFooter({ className, ...props }) {
-  return <div className={cn('flex flex-row justify-end gap-2', className)} {...props} />
+  return <div className={cn('flex flex-wrap justify-end gap-2', className)} {...props} />
 }
 
 const AlertDialogTitle = React.forwardRef(({ className, ...props }, ref) => (

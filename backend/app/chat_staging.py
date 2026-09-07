@@ -50,7 +50,7 @@ from .engine.pptx import extract_text as extract_pptx
 from .engine.txt import TEXT_EXTS, _preview_bytes as _txt_preview_bytes
 from .engine.txt import extract_text as extract_txt
 from .engine.xlsx import XlsxError, _norm_value, anonymize_xlsx_column, \
-    column_values, sheet_names, truncate_for_preview
+    column_values, sheet_names, sheet_name_aliases, truncate_for_preview
 from .engine.xlsx import extract_text as extract_xlsx
 from .openrouter import briefing
 
@@ -199,6 +199,14 @@ def build_preview(ext, original_data, redacted_data, repl_pairs, canonical,
         anonymized_boxes = report_boxes
     else:
         anonymized_boxes = pdf_mod._placeholder_boxes(preview_anon, canonical)
+    if ext == ".pdf" and report_boxes is not None:
+        # Image OCR has no searchable text in the original PDF. Its redaction
+        # rectangles keep the same page coordinates and belong on BOTH sides,
+        # including local OCR placeholders absent from the canonical mapping.
+        for pno, blist in report_boxes.items():
+            original_boxes.setdefault(int(pno), []).extend(
+                dict(b) for b in blist if b.get("ocr") and not b.get("sealed"))
+        original_boxes = {p: bl for p, bl in original_boxes.items() if bl}
     if ext in ca._IMAGE_EXTS and report_boxes:
         # niente layer testuale nell'immagine: a sinistra si mostrano gli
         # stessi rettangoli (il valore stava lì, l'immagine non si sposta).
@@ -1021,10 +1029,17 @@ def columns_layout(conv_id, item_id):
         return out
     if not names:
         return out
+    aliases = {}
+    if _att.protected_path and Path(_att.protected_path).is_file():
+        aliases = sheet_name_aliases(data, Path(_att.protected_path).read_bytes())
     for source in ("original", "anonymized"):
         pdf = preview_pdf(conv_id, item_id, source)
         if pdf:
-            out[source] = spreadsheet_columns(pdf, names)
+            displayed = aliases if source == "anonymized" and aliases else names
+            out[source] = spreadsheet_columns(pdf, displayed)
+            if source == "anonymized":
+                for page in out[source].values():
+                    page["sheet"] = aliases.get(page["sheet"], page["sheet"])
     return out
 
 

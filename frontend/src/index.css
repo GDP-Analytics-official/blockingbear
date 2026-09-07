@@ -80,6 +80,114 @@
   }
 }
 
+/* Shared responsive geometry; business controls retain their existing handlers. */
+/* Altezza della shell: 100dvh (o 100%, per i browser senza dvh) segue il
+   viewport in modo esatto, frazioni comprese; --app-height la imposta solo
+   DashboardLayout quando la tastiera virtuale copre lo schermo. */
+.app-shell { height: 100%; height: var(--app-height, 100dvh); }
+.mobile-nav-bar { padding-top: max(6px, env(safe-area-inset-top)); }
+.chat-page .mobile-nav-bar { padding-top: 6px; }
+.chat-composer { padding-bottom: max(12px, env(safe-area-inset-bottom)); }
+.mobile-drawer {
+  inset: 0 auto 0 0;
+  transform: none;
+  width: min(320px, calc(100vw - 48px));
+  max-width: none;
+  height: 100dvh;
+  max-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom) env(safe-area-inset-left);
+  border-radius: 0;
+  overflow: visible;
+}
+.mobile-drawer a:not([target]), .mobile-drawer [role="menuitem"] { min-height: 44px; }
+.chat-composer [data-ui="button"] { flex-shrink: 0; }
+.chat-page { overflow-wrap: anywhere; }
+.chat-page pre, .chat-page table { overflow-wrap: normal; }
+.page-content { padding: 24px; }
+
+@media (max-width: 639px) {
+  .page-content { padding: 16px; }
+  .mobile-card-table, .mobile-card-table tbody { display: block; }
+  .mobile-card-table thead { display: none; }
+  .mobile-card-table tbody tr {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 12px;
+    padding: 12px;
+  }
+  .mobile-card-table tbody td {
+    display: block;
+    width: auto;
+    max-width: 100%;
+    min-width: 0;
+    padding: 2px 0;
+    overflow-wrap: anywhere;
+    white-space: normal;
+    text-align: left;
+  }
+  .mobile-card-table tbody td:first-child { flex: 1 1 100%; }
+  .mobile-card-table tbody td:last-child { margin-left: auto; }
+  .mobile-card-table tbody td.mobile-secondary { display: none; }
+  .mobile-card-table tbody td[data-label]::before {
+    content: attr(data-label) ": ";
+    color: var(--muted-foreground);
+    font-size: 12px;
+  }
+  .mobile-card-table tbody td[data-label] > div { display: inline-block; }
+  .floating-panel:not(.floating-inline) {
+    position: fixed;
+    inset: auto 12px max(12px, env(safe-area-inset-bottom));
+    z-index: 60;
+    width: auto;
+    max-width: none;
+    max-height: min(70dvh, 600px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    border: 2px solid var(--primary);
+    box-shadow: 0 -6px 24px rgb(20 28 46 / 0.18), 0 12px 32px rgb(20 28 46 / 0.24);
+  }
+  .floating-panel ul { max-height: 40dvh; }
+  .chat-toolbar, .chat-stats { gap: 6px; }
+  .chat-toolbar [data-tour="model"] > div > button { padding-inline: 8px; gap: 4px; }
+  .chat-stats:empty { display: none; }
+  .chat-anon-banner > label { min-width: 0; max-width: 100%; white-space: normal; }
+  .chart-tip { left: 50% !important; max-width: 100%; }
+  .cost-bar { flex-wrap: wrap; row-gap: 4px; margin-bottom: 8px; }
+  .cost-bar > span { width: 100%; text-align: left; }
+  .cost-bar > div { flex-basis: 100%; }
+  .term-row { flex-wrap: wrap; }
+  .term-row > input:first-child { flex: 1 1 100%; }
+  .term-row > input:nth-child(2) { flex: 1; }
+  .driver-popover.blockingbear-tour { max-width: calc(100vw - 24px); }
+}
+
+@media (max-width: 1023px) {
+  .app-shell { padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); }
+  .sidebar-footer { padding-bottom: env(safe-area-inset-bottom); }
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  select, textarea { font-size: 16px !important; }
+  input, select, textarea { max-width: 100%; }
+  [data-ui="button"] { min-height: 44px; white-space: normal; height: auto; }
+  [data-ui="button"]:has(> svg:only-child) { min-width: 44px; }
+}
+
+@media (pointer: coarse) {
+  .touch-action { opacity: 1; width: 36px; height: 44px; padding: 12px 10px; }
+  .touch-control { min-width: 44px; min-height: 44px; }
+  .code-actions { position: static; flex-wrap: wrap; justify-content: flex-end; margin-top: 4px; opacity: 1; }
+  .code-actions button { min-height: 44px; }
+  input[type="checkbox"], input[type="radio"] { width: 20px; height: 20px; flex-shrink: 0; }
+}
+
+@media (max-height: 500px) and (max-width: 1023px) {
+  .chat-toolbar { max-height: 25dvh; overflow: auto; }
+  .chat-composer textarea { max-height: 25dvh !important; }
+}
+
 /* Tutorial del primo accesso (driver.js, src/onboarding/): il popover parla
    la lingua del design system invece del tema bianco di default. */
 .driver-popover.blockingbear-tour {

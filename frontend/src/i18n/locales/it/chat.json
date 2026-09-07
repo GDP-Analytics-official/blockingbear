@@ -165,6 +165,7 @@
     "costTitle": "Costo di questa conversazione: {{cost}} $ · {{prompt}} token in ingresso, {{completion}} in uscita",
     "context": "Contesto {{used}} / {{max}} · {{pct}}%",
     "contextTitle": "Occupazione del contesto del modello: {{used}} token su {{max}} disponibili ({{pct}}%), misurata sull'ultima risposta. Si aggiorna alla fine di ogni turno.",
+    "contextPct": "Contesto: {{pct}}%",
     "anonRequired": "Conversazione anonimizzata (obbligatoria per impostazione dell'amministratore)",
     "anonOn": "Conversazione anonimizzata",
     "review": "Vedi testo e file anonimizzati prima di inviare",
@@ -175,6 +176,7 @@
     "toBottom": "Vai in fondo"
   },
   "composer": {
+    "placeholderMobile": "Scrivi un messaggio…",
     "pendingTitle": "In allegato al prossimo messaggio:",
     "uploading": " · {{size}} · caricamento…",
     "queued": " · {{size}} · in coda",
@@ -184,6 +186,9 @@
     "stopping": "Interruzione in corso…",
     "send": "Invia",
     "waitUploads": "Attendi il caricamento degli allegati",
+    "dropHere": "Rilascia qui i file per allegarli",
+    "dropWait": "Attendi la fine della risposta prima di allegare file",
+    "dropFolder": "Le cartelle non si possono allegare: trascina i singoli file",
     "aiDisclosure": "Le risposte sono generate da un modello di intelligenza artificiale e possono contenere errori o imprecisioni."
   },
   "error": {

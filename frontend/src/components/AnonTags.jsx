@@ -82,7 +82,7 @@ export default function AnonTags({ convId, tags, groups = null, value, onChange,
     const n = counts?.[tag] || 0
     return (
       <label key={tag}
-             className="flex cursor-pointer select-none items-center gap-2 rounded-md px-1.5 py-1 hover:bg-accent">
+             className="touch-control flex cursor-pointer select-none items-center gap-2 rounded-md px-1.5 py-1 hover:bg-accent">
         <Checkbox checked={!off} disabled={disabled}
                   onCheckedChange={() => toggle(tag)} />
         <span className={cn('min-w-0 flex-1 truncate font-mono text-[11px]',
@@ -112,13 +112,13 @@ export default function AnonTags({ convId, tags, groups = null, value, onChange,
               title={excluded.size
                 ? t('chip.someClear', { count: excluded.size })
                 : t('chip.allCovered')}
-              className="shadow-emerald-500/40"
+              className="shadow-emerald-500/40" aria-label={t('panel.title')} aria-expanded={open}
               onClick={() => setOpen((o) => !o)}>
         <ShieldCheck className="size-3.5 text-emerald-700 dark:text-emerald-400" />
       </Button>
 
       {open && (
-        <div className="absolute left-0 z-20 mt-1 w-[380px] max-w-[85vw] overflow-hidden rounded-lg border border-border bg-popover shadow-lg">
+        <div className="floating-panel absolute left-0 z-20 mt-1 w-[380px] max-w-[85vw] overflow-hidden rounded-lg border border-border bg-popover shadow-lg">
           <div className="flex items-center justify-between border-b border-border px-3 py-2">
             <span className="text-xs font-semibold">{t('panel.title')}</span>
             <button className="text-muted-foreground hover:text-foreground"

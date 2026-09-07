@@ -3,6 +3,7 @@
     "subtitle": "Anonymize personal data"
   },
   "nav": {
+    "menu": "Navigation menu",
     "newChat": "New Chat",
     "projects": "Projects",
     "users": "Users",

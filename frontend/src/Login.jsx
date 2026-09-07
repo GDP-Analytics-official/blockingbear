@@ -109,7 +109,7 @@ export default function Login() {
   }
 
   return (
-    <div className="relative grid h-full place-items-center px-4 py-8">
+    <div className="relative flex min-h-full flex-col items-center justify-center gap-6 px-4 py-8">
       <div className="flex w-full max-w-sm flex-col items-center gap-6">
         {/* In primo piano: marchio grande e nome dell'app. */}
         <div className="flex flex-col items-center gap-2 text-center">
@@ -119,11 +119,11 @@ export default function Login() {
 
         <form
           onSubmit={submit}
-          className="flex w-full flex-col gap-5 rounded-xl border border-border bg-card p-8 shadow-[0_10px_40px_rgba(20,28,46,0.08)]"
+          className="flex w-full flex-col gap-5 rounded-xl border border-border bg-card p-5 sm:p-8 shadow-[0_10px_40px_rgba(20,28,46,0.08)]"
         >
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="login-user">Username</Label>
-            <Input id="login-user" value={username} autoFocus autoComplete="username"
+            <Input id="login-user" value={username} autoComplete="username"
                    onChange={(e) => setUsername(e.target.value)} />
           </div>
 
@@ -156,7 +156,7 @@ export default function Login() {
         </form>
       </div>
       {/* firma, la stessa del menu utente nella sidebar: non si traduce */}
-      <div className="absolute inset-x-0 bottom-4 flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground">
+      <div className="flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground">
         <span>Made in</span>
         <FlagIt className="w-4" />
         <span>by{' '}

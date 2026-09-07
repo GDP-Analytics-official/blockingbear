@@ -13,6 +13,9 @@ I placeholder sono quelli ORIGINALI di rizzo-pii: `[FULLNAME_1]`, `[IBAN_1]`,
 import bisect
 import re
 import threading
+import unicodedata
+
+from .text_patterns import WORD, canonical, literal, PLACEHOLDER_RE
 
 from .detectors import (DETECTORS, DEVICE_LABELS, EXACT_SPAN_LABELS, SOFT_REGEX_LABELS, TAG_GROUPS,
                         detect_eu_vat, detect_regex,
@@ -46,7 +49,7 @@ def chunk_text(text, max_words=MAX_WORDS, overlap=OVERLAP):
 
 def _is_word(ch):
     """Carattere interno a una parola (lettere accentate e cifre incluse)."""
-    return ch.isalnum() or ch == "_"
+    return ch.isalnum() or ch == "_" or bool(unicodedata.combining(ch))
 
 
 def _merge(cands, text):
@@ -71,6 +74,8 @@ def _merge(cands, text):
         kept.insert(i, e)
     # niente spazi inglobati nei placeholder
     for e in kept:
+        if e["label"] in EXACT_SPAN_LABELS:
+            continue
         while e["start"] < e["end"] and text[e["start"]].isspace():
             e["start"] += 1
         while e["end"] > e["start"] and text[e["end"] - 1].isspace():
@@ -125,7 +130,7 @@ def _merge(cands, text):
 
 
 def _norm(s):
-    return re.sub(r"\s+", " ", s.strip()).casefold()
+    return canonical(s)
 
 
 def _term_pattern(term):
@@ -135,8 +140,8 @@ def _term_pattern(term):
     toks = [t for t in re.split(r"\s+", (term or "").strip()) if t]
     if not toks:
         return None
-    body = r"\s+".join(re.escape(t) for t in toks)
-    return re.compile(r"(?<!\w)" + body + r"(?!\w)", re.IGNORECASE)
+    body = r"\s+".join(literal(t) for t in toks)
+    return re.compile(rf"(?<![{WORD}])" + body + rf"(?![{WORD}])", re.IGNORECASE)
 
 
 # --------------------------------------------------------------------------- #
@@ -276,9 +281,46 @@ def _clean_card(e, text, found):
     return None
 
 
-POST_CHECKS = {"PIVA": _clean_piva, "IBAN": _clean_iban,
+def _scan_cf(text):
+    """Structural candidates for model CF spans, including supported countries.
+
+    The model supplies contextual evidence. A damaged checksum does not remove
+    a structurally plausible identifier, but a short table code is rejected.
+    Regex detection and explicit custom terms keep their own policies.
+    """
+    from .national_ids import RULES, _norm as id_norm
+    from .text_patterns import normalized_detector
+
+    @normalized_detector
+    def scan(view):
+        out = []
+        for label, rx, validator, _strict in DETECTORS:
+            if label == "CF":
+                for m in rx.finditer(view):
+                    out.append({"start": m.start(), "end": m.end(),
+                                "validated": bool(validator(m.group()))})
+        for label, _country, rx, validator, _cue, _needed in RULES:
+            if label == "CF":
+                for m in rx.finditer(view):
+                    out.append({"start": m.start("v"), "end": m.end("v"),
+                                "validated": bool(validator and
+                                    validator(id_norm(m.group("v"))))})
+        return out
+    return sorted(scan(text), key=lambda e: (
+        -int(e["validated"]), -(e["end"] - e["start"])))
+
+
+def _clean_cf(e, text, found):
+    for candidate in found:
+        if _overlaps(e, candidate["start"], candidate["end"]):
+            return {**e, **candidate}
+    return None
+
+
+POST_CHECKS = {"CF": _clean_cf, "PIVA": _clean_piva, "IBAN": _clean_iban,
                "CREDITCARDNUMBER": _clean_card}
-_SCANNERS = {"PIVA": detect_eu_vat, "IBAN": scan_iban, "CREDITCARDNUMBER": scan_card}
+_SCANNERS = {"CF": _scan_cf, "PIVA": detect_eu_vat, "IBAN": scan_iban,
+             "CREDITCARDNUMBER": scan_card}
 
 
 def post_check(ents, text):
@@ -477,15 +519,17 @@ class PiiEngine:
 def decode_text(text, mapping):
     """Rimette i valori originali al posto dei placeholder ([FULLNAME_1] -> "Mario Rossi").
 
-    Confini alfanumerici sui due lati + parentesi letterali: [FULLNAME_1] non
-    scatta dentro [FULLNAME_12]; i placeholder più lunghi si provano per primi
-    per lo stesso motivo.
+    Tokens are replaced once, including when adjacent to ordinary text.
+    Replacement values are literal data and are never decoded recursively.
     """
     if not mapping:
         return text, 0
-    n = 0
-    for ph in sorted(mapping, key=len, reverse=True):
-        pattern = re.compile(r"(?<![A-Za-z0-9_])" + re.escape(ph) + r"(?![A-Za-z0-9_])")
-        text, k = pattern.subn(lambda _m: mapping[ph], text)
-        n += k
-    return text, n
+    # One pass: mapped values are data, even when they contain another token.
+    count = 0
+    def restore(match):
+        nonlocal count
+        if match.group() not in mapping:
+            return match.group()
+        count += 1
+        return mapping[match.group()]
+    return PLACEHOLDER_RE.sub(restore, text), count

@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { Check, Copy } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
+import { splitBlocks, isTableDelimiter, utf16Entities } from '@/lib/markdownSyntax.js'
 import {
   hasRestorablePlaceholder,
   restorePlaceholders,
@@ -18,33 +19,6 @@ import {
 // ``` non vengono mai interpretati come markdown (si mostrano verbatim),
 // così il codice resta leggibile.
 
-// spezza il testo in blocchi: fence ```...``` oppure testo normale
-function splitBlocks(src) {
-  const blocks = []
-  const lines = src.replace(/\r\n/g, '\n').split('\n')
-  let buf = []
-  let i = 0
-  const flush = () => {
-    if (buf.length) { blocks.push({ type: 'text', content: buf.join('\n') }); buf = [] }
-  }
-  while (i < lines.length) {
-    const m = lines[i].match(/^```(\w*)\s*$/)
-    if (m) {
-      flush()
-      const lang = m[1]
-      const code = []
-      i++
-      while (i < lines.length && !/^```\s*$/.test(lines[i])) { code.push(lines[i]); i++ }
-      i++ // salta la fence di chiusura
-      blocks.push({ type: 'code', lang, content: code.join('\n') })
-    } else {
-      buf.push(lines[i]); i++
-    }
-  }
-  flush()
-  return blocks
-}
-
 // Gli span PII vengono sostituiti con token privati PRIMA del parsing: in
 // questo modo un valore reale contenente `*`, HTML o sintassi link rimane un
 // nodo testuale React e non può cambiare il Markdown circostante.
@@ -53,7 +27,7 @@ function tokenizeEntities(text, entities) {
   const lookup = new Map()
   const out = []
   let pos = 0
-  entities.slice().sort((a, b) => a.start - b.start).forEach((entity, i) => {
+  utf16Entities(text, entities).sort((a, b) => a.start - b.start).forEach((entity, i) => {
     if (entity.start < pos || entity.end < entity.start || entity.end > text.length) return
     const token = `\uE000${i}\uE001`
     out.push(text.slice(pos, entity.start), token)
@@ -68,7 +42,7 @@ function tokenizeEntities(text, entities) {
 // agganciare il mezzo di una parola ("pippowww.com"). Il char-class esclude
 // i delimitatori dei token PII, così un URL adiacente a un'entità non
 // ingloba il token.
-const BARE_URL_RE = /\bhttps?:\/\/[^\s\uE000\uE001]+|(?<![\w.])www\.[^\s\uE000\uE001]+/
+const BARE_URL_RE = /\bhttps?:\/\/[^\s\uE000\uE001]+|(?<![\w.])www\.[^\s\uE000\uE001]+/i
 
 // La punteggiatura finale appartiene alla frase, non al link ("vedi
 // https://x.it." -> il punto resta testo); una ")" chiusa senza la
@@ -87,8 +61,8 @@ function trimBareUrl(raw) {
 
 // href per un testo che È un URL (nudo), null altrimenti
 function urlHref(text) {
-  if (!new RegExp(`^(?:${BARE_URL_RE.source})$`).test(text)) return null
-  return text.startsWith('www.') ? `https://${text}` : text
+  if (!new RegExp(`^(?:${BARE_URL_RE.source})$`, 'i').test(text)) return null
+  return /^www\./i.test(text) ? `https://${text}` : text
 }
 
 // Testo semplice con i soli URL resi cliccabili: niente markdown (la bolla
@@ -96,7 +70,7 @@ function urlHref(text) {
 // perché la bolla ha il proprio foreground (bianco su primary).
 export function Linkify({ text }) {
   if (!text) return null
-  const re = new RegExp(BARE_URL_RE.source, 'g')
+  const re = new RegExp(BARE_URL_RE.source, 'gi')
   const nodes = []
   let last = 0
   let m
@@ -105,7 +79,7 @@ export function Linkify({ text }) {
     if (m.index > last) nodes.push(text.slice(last, m.index))
     const url = trimBareUrl(m[0])
     nodes.push(
-      <a key={k++} href={url.startsWith('www.') ? `https://${url}` : url}
+      <a key={k++} href={/^www\./i.test(url) ? `https://${url}` : url}
          target="_blank" rel="noreferrer"
          className="underline underline-offset-2 hover:opacity-80">
         {url}
@@ -134,8 +108,8 @@ function renderCodeText(text, keyBase, values, t) {
 function renderInline(text, keyBase, entityLookup, codeValues, t) {
   const nodes = []
   const re = new RegExp(
-    `(\uE000\\d+\uE001)|(\`[^\`]+\`)|(\\*\\*[^*]+\\*\\*)|(\\*[^*]+\\*)|(\\[[^\\]]+\\]\\([^)]+\\))|(${BARE_URL_RE.source})`,
-    'g')
+    `(\uE000\\d+\uE001)|(\`[^\`]+\`)|(\\*\\*[^*]+\\*\\*)|(\\*[^*]+\\*)|(\\[[^\\[\\]]+\\]\\([^)]+\\))|(${BARE_URL_RE.source})`,
+    'gi')
   let last = 0
   let m
   let k = 0
@@ -183,7 +157,7 @@ function renderInline(text, keyBase, entityLookup, codeValues, t) {
       // URL nudo: cliccabile; l'eventuale punteggiatura finale resta testo
       const url = trimBareUrl(tok)
       nodes.push(
-        <a key={key} href={url.startsWith('www.') ? `https://${url}` : url}
+        <a key={key} href={/^www\./i.test(url) ? `https://${url}` : url}
            target="_blank" rel="noreferrer"
            className="text-primary underline underline-offset-2">
           {url}
@@ -203,7 +177,6 @@ function renderInline(text, keyBase, entityLookup, codeValues, t) {
 // stesso numero di celle dell'intestazione: così un paragrafo che contiene
 // un "|" resta un paragrafo. Le entità PII sono già token opachi a questo
 // punto, quindi un valore reale che contiene "|" non può sfasare le colonne.
-const DELIM_RE = /^\s*\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)*\|?\s*$/
 
 function splitRow(line) {
   const cells = []
@@ -230,7 +203,7 @@ function alignOf(cell) {
 function matchTable(lines, i) {
   if (!lines[i].includes('|')) return null
   const delim = lines[i + 1]
-  if (!delim || !DELIM_RE.test(delim)) return null
+  if (!delim || !isTableDelimiter(delim)) return null
   const header = splitRow(lines[i])
   const aligns = splitRow(delim).map(alignOf)
   if (!header.length || aligns.length !== header.length) return null
@@ -367,7 +340,7 @@ function CodeBlock({ content, values }) {
           {renderCodeText(content, 'fenced', values, t)}
         </code>
       </pre>
-      <div className="absolute right-1.5 top-1.5 flex gap-1 opacity-0 transition-opacity
+      <div className="code-actions absolute right-1.5 top-1.5 flex gap-1 opacity-0 transition-opacity
                       focus-within:opacity-100 group-hover:opacity-100">
         {restorable && (
           <button type="button" onClick={() => copy(true)}

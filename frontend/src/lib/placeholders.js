@@ -1,4 +1,4 @@
-const PLACEHOLDER_SOURCE = String.raw`\[[A-Z][A-Z0-9_]*_\d+\]`
+const PLACEHOLDER_SOURCE = String.raw`\[[A-Z0-9_]+_\d+\]`
 
 function known(values, placeholder) {
   return values != null
