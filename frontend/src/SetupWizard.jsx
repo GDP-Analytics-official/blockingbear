@@ -6,6 +6,7 @@ import { api } from './api.js'
 import i18n from './i18n/index.js'
 import { LANGUAGES } from '@/i18n/languages.jsx'
 import { CategoriesPicker, TermsEditor, cleanTerms, termsInvalid } from './AnonOptions.jsx'
+import { defaultExcluded as computeDefaultExcluded } from '@/lib/anonDefaults.js'
 import { Checkbox } from '@/components/ui/checkbox'
 import { TriangleAlert } from 'lucide-react'
 import { LogoMark } from '@/components/Logo.jsx'
@@ -34,18 +35,6 @@ import { cn } from '@/lib/utils'
 // stessa pagina (dopo un F5 la password non c'è più, e l'admin già creato
 // viene segnalato allo step 3).
 const STEPS = 8
-
-// Categorie ATTIVE di partenza: quelle con meno falsi positivi. Tutte le altre
-// del modello nascono spente e si accendono dallo step 4 (o poi da
-// Impostazioni). Si salva l'esclusione: excluded = tags − DEFAULT_ON.
-// Il gruppo «Cybersecurity» (credenziali e identificativi tecnici, regex di
-// formato) nasce tutto acceso: pochi falsi positivi e dati che non devono uscire.
-const DEFAULT_ON = new Set(['CF', 'CITY', 'CREDITCARDNUMBER', 'EMAIL', 'FULLNAME', 'IBAN',
-                            'ORG', 'PASSWORD', 'PIVA', 'SECRET', 'STREET', 'TELEPHONENUM',
-                            'URL', 'USERNAME',
-                            'CERTIFICATE', 'CRYPTO_WALLET', 'DEVICE_ID', 'HOSTNAME',
-                            'IP_ADDRESS', 'MAC_ADDRESS', 'PASSWORD_HASH', 'PRODUCT_KEY',
-                            'SSH_FINGERPRINT', 'SSH_KEY', 'TOTP_SECRET', 'WINDOWS_SID'])
 
 function PwField({ id, label, value, onChange, autoFocus }) {
   const [show, setShow] = useState(false)
@@ -89,6 +78,7 @@ export default function SetupWizard({ status, onDone }) {
   const [tags, setTags] = useState([])
   const [tagGroups, setTagGroups] = useState(null)   // {cyber: [...]} da /api/tags
   const [excluded, setExcluded] = useState(null)   // null = tag non ancora arrivati
+  const [tagsError, setTagsError] = useState('')   // /api/tags fallito (es. modello assente)
   const [defaultExcluded, setDefaultExcluded] = useState([])
   const [terms, setTerms] = useState([{ text: '', tag: 'CUSTOM' }])
   const [policy, setPolicy] = useState('optional')
@@ -104,18 +94,22 @@ export default function SetupWizard({ status, onDone }) {
   const [error, setError] = useState('')
   const { t } = useTranslation('setup')
 
-  // i tag del modello (categorie + datalist dei termini): /api/tags è pubblico
+  // i tag del modello (categorie + datalist dei termini): /api/tags è pubblico.
+  // Se fallisce (503 pii_model_missing: checkpoint non scaricato, cartella vuota)
+  // le esclusioni restano null e lo step non si supera: una lista vuota
+  // salvata varrebbe «tutte le categorie attive» appena il modello arriva.
+  // «Riprova» azzera l'errore e rilancia la chiamata.
   useEffect(() => {
-    if (step !== 4 || excluded !== null) return
+    if (step !== 4 || excluded !== null || tagsError) return
     api.getTags().then((r) => {
       const all = r.all || []
       setTags(all)
       setTagGroups(r.groups || null)
-      const off = all.filter((tag) => !DEFAULT_ON.has(tag)).sort()
+      const off = computeDefaultExcluded(all)
       setDefaultExcluded(off)
       setExcluded(off)
-    }).catch(() => { setTags([]); setExcluded([]) })
-  }, [step, excluded])
+    }).catch((e) => setTagsError(e.message))
+  }, [step, excluded, tagsError])
 
   // catalogo per lo step del modello: la chiave è quella dell'admin creato
   useEffect(() => {
@@ -353,10 +347,23 @@ export default function SetupWizard({ status, onDone }) {
               <div className="flex flex-col gap-4">
                 <h2 className="text-lg font-semibold">{t('categories.title')}</h2>
                 <p className="text-sm text-muted-foreground">{t('categories.intro')}</p>
-                {excluded === null
+                {tagsError ? (
+                  <div className="flex flex-col gap-3 rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm">
+                    <div className="flex items-start gap-2 text-destructive">
+                      <TriangleAlert className="mt-0.5 size-4 shrink-0" />
+                      <span className="break-words">{tagsError}</span>
+                    </div>
+                    <p className="text-muted-foreground">{t('categories.unavailable')}</p>
+                    <div>
+                      <Button type="button" variant="outline" size="sm" onClick={() => setTagsError('')}>
+                        {t('categories.retry')}
+                      </Button>
+                    </div>
+                  </div>
+                ) : excluded === null
                   ? <div className="text-sm text-muted-foreground">{t('state.loading', { ns: 'common' })}</div>
                   : <CategoriesPicker tags={tags} groups={tagGroups} excluded={excluded} onChange={setExcluded}
-                                      defaults={defaultExcluded} defaultLabel={t('categories.default')} />}
+                                      defaults={defaultExcluded} />}
                 {excluded !== null && excluded.length === 0 && tags.length > 0 && (
                   <div className="flex items-start gap-2 rounded-md border border-amber-500/50 bg-amber-500/10 px-3 py-2 text-sm text-amber-800 dark:text-amber-300">
                     <TriangleAlert className="mt-0.5 size-4 shrink-0" />

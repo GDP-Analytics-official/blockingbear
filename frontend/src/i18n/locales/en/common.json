@@ -29,6 +29,7 @@
     "http": "Error {{status}}",
     "network": "Cannot reach the server: check that it is running and try again.",
     "connectionLost": "Connection lost.",
+    "pii_model_missing": "PII model not installed: the folder {{dir}} does not contain config.json. Finish downloading the checkpoint into that folder and try again.",
 
     "token_missing": "Missing token.",
     "session_expired": "Your session has expired: please sign in again.",

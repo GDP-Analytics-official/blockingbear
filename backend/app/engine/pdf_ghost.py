@@ -134,6 +134,26 @@ def ghost_rects(page):
         return [], 0
 
 
+def _image_coverage(rect, images):
+    """Union area inside a span, including scans split into adjacent tiles.
+
+    Sum the union, not image areas: overlapping background layers must not
+    turn a small covered fragment into a falsely fully covered text span.
+    """
+    clips = [rect & im for im in images if rect.intersects(im)]
+    xs = sorted({x for r in clips for x in (r.x0, r.x1)})
+    area = 0.0
+    for x0, x1 in zip(xs, xs[1:]):
+        intervals = sorted((r.y0, r.y1) for r in clips if r.x0 < x1 and r.x1 > x0)
+        end = float('-inf')
+        height = 0.0
+        for y0, y1 in intervals:
+            height += max(0.0, y1 - max(y0, end))
+            end = max(end, y1)
+        area += (x1 - x0) * height
+    return area
+
+
 def _ghost_rects(page):
     inv, vis = _spans(page)
     if not inv:
@@ -144,7 +164,8 @@ def _ghost_rects(page):
     out, n_chars = [], 0
     for r, n in inv:
         area = r.get_area() or 1.0
-        if not any((r & im).get_area() >= ON_IMAGE * area for im in images):
+        if (not any((r & im).get_area() >= ON_IMAGE * area for im in images)
+                and _image_coverage(r, images) < ON_IMAGE * area):
             continue                                   # non sta sopra i pixel
         if any((r & vr).get_area() > 0 for vr, _ in vis):
             continue                                   # sfiora testo visibile

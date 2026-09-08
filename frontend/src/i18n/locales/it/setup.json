@@ -43,7 +43,8 @@
     "title": "Categorie da anonimizzare",
     "intro": "Scegli quali categorie di informazioni il modello deve anonimizzare per tutti gli utenti. Quelle già attive sono le più affidabili: puoi allargare la scelta anche dopo, dalla pagina Impostazioni, o restringerla per singolo progetto o chat.",
     "allWarning": "Attenzione: attivare tutte le categorie aumenta la probabilità di falsi positivi (testo anonimizzato per errore). Almeno all'inizio è consigliabile procedere con le categorie predefinite.",
-    "default": "Default"
+    "unavailable": "Le categorie arrivano dal modello di anonimizzazione, che al momento non è disponibile. Senza modello la configurazione non può proseguire: management key e amministratore sono già salvati, quindi puoi installare il modello e riprendere da qui.",
+    "retry": "Riprova"
   },
   "chat": {
     "title": "Regole della chat",

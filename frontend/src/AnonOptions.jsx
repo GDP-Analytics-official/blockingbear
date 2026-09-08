@@ -10,7 +10,9 @@ import { groupChecked, splitGroup, toggleGroup } from '@/lib/tagGroups.js'
 // Editor delle opzioni di anonimizzazione della pagina Impostazioni (livello
 // GLOBALE dell'admin: categorie escluse + termini che valgono per tutti).
 // value = {excluded_tags: [...], custom_terms: [{text, tag}]}; tags = lista
-// dei tag rilevabili (da /api/tags, campo "all"); groups = campo "groups"
+// dei tag rilevabili (da /api/tags, campo "all"); defaults = lista di
+// esclusione di partenza (lib/anonDefaults.js) per il bottone «Default»,
+// null per non mostrarlo; groups = campo "groups"
 // della stessa risposta ({cyber: [...]}: quali tag stanno sotto la voce
 // «Cybersecurity»). Le etichette restano i tag del modello, senza traduzioni
 // mantenute a mano.
@@ -117,10 +119,10 @@ export function TermsEditor({ terms, tags, onChange, datalistId = 'anon-tag-list
   )
 }
 
-// La griglia delle categorie con «Tutte» / «Nessuna». `excluded` è la lista
+// La griglia delle categorie con «Default» / «Tutte» / «Nessuna». `excluded` è la lista
 // dei tag SPENTI (si salva l'esclusione, non l'inclusione: un tag nuovo del
 // modello nasce attivo). La usano la pagina Impostazioni e il wizard.
-export function CategoriesPicker({ tags, groups = null, excluded, onChange, defaults = null, defaultLabel = 'Default' }) {
+export function CategoriesPicker({ tags, groups = null, excluded, onChange, defaults = null }) {
   const { t } = useTranslation('anon')
   const [cyberOpen, setCyberOpen] = useState(false)
   const off = new Set(excluded)
@@ -156,7 +158,7 @@ export function CategoriesPicker({ tags, groups = null, excluded, onChange, defa
           {defaults !== null && (
             <Button type="button" variant="ghost" size="sm" className="h-6 px-2 text-xs"
                     disabled={isDefault} onClick={() => onChange([...defaults].sort())}>
-              {defaultLabel}
+              {t('categories.default')}
             </Button>
           )}
           <Button type="button" variant="ghost" size="sm" className="h-6 px-2 text-xs"
@@ -201,12 +203,12 @@ export function CategoriesPicker({ tags, groups = null, excluded, onChange, defa
   )
 }
 
-export default function AnonOptions({ tags, groups = null, value, onChange }) {
+export default function AnonOptions({ tags, groups = null, value, onChange, defaults = null }) {
   const { t } = useTranslation('anon')
 
   return (
     <div className="flex flex-col gap-6">
-      <CategoriesPicker tags={tags} groups={groups} excluded={value.excluded_tags}
+      <CategoriesPicker tags={tags} groups={groups} excluded={value.excluded_tags} defaults={defaults}
                         onChange={(next) => onChange({ ...value, excluded_tags: next })} />
 
       <section>

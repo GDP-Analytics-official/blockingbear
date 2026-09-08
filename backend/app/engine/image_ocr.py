@@ -50,6 +50,7 @@ import threading
 
 from .mupdf_lock import mupdf_serialized
 from .progress import NULL as _NULL_CTL
+from . import pdf_image_regions
 
 # ext delle immagini che Pillow sa riscrivere e RapidOCR sa leggere
 # (niente vettoriali: emf/wmf/svg dentro gli OOXML restano intatti)
@@ -258,18 +259,28 @@ def _vector_page(page):
     area = abs(page.rect) or 1.0
     cover = sum(max(0.0, b[2] - b[0]) * max(0.0, b[3] - b[1])
                 for b in (i["bbox"] for i in infos))
-    return cover / area < _VEC_IMG_COVER
+    # Long image-placement streams are not vector text: a small scan can be
+    # stored as dozens of strips without covering half the page. Require real
+    # vector artwork before choosing the full-page vector rendering fallback.
+    return cover / area < _VEC_IMG_COVER and bool(page.get_drawings())
 
 
 @mupdf_serialized
 def pdf_images(pdf_bytes, render_pages=True):
-    """Immagini raster del PDF più le pagine vettoriali rese per intero:
+    """Raster images, composed tile regions and rendered vector-only pages.
+
+    Adjacent tiles use region:n:k keys with pdf_region placement metadata.
+    OCR sees the composed image resources only; native text stays on its own
+    extraction path. Isolated images (including header logos) keep xref keys.
+
+    Immagini raster del PDF più le pagine vettoriali rese per intero:
     [{"key": str(xref) | "page:n", "page": n, "ext", "data"}].
     Dedup per xref (la stessa immagine può comparire su più pagine);
     l'ordine segue la prima pagina d'uso, così la numerazione dei placeholder
     rispecchia l'ordine di lettura. Le immagini incorporate in una pagina
     vettoriale NON si enumerano a parte: stanno già dentro il suo render.
-    render_pages=False salta il render (costoso) delle pagine vettoriali e le
+    render_pages=False skips rendering both regions and vector pages.
+    Salta il render (costoso) delle pagine vettoriali e le
     ritorna senza "data": serve solo a contarle (count_images)."""
     import fitz
     out, seen = [], set()
@@ -284,8 +295,23 @@ def pdf_images(pdf_bytes, render_pages=True):
                     entry["data"] = page.get_pixmap(dpi=PAGE_DPI).tobytes("png")
                 out.append(entry)
                 continue
+            groups = pdf_image_regions.tile_groups(page)
+            out.extend(pdf_image_regions.render_groups(
+                page, groups, PAGE_DPI, _OCR_MAX_SIDE - 2 * _OCR_FRAME_MIN,
+                render=render_pages))
+            grouped = {i['xref'] for group in groups for i in group}
+            # A shared xref can also have an isolated placement on this page.
+            # Keep its standalone OCR in that case, and union all pixel masks.
+            grouped_indices = {i['index'] for group in groups for i in group}
+            if grouped:
+                standalone = {i['xref'] for index, i in
+                              enumerate(page.get_image_info(xrefs=True))
+                              if index not in grouped_indices}
+                grouped -= standalone
             for img in page.get_images(full=True):
                 xref = img[0]
+                if xref in grouped:
+                    continue
                 if xref in seen:
                     continue
                 seen.add(xref)
@@ -430,11 +456,22 @@ def build_cache(images, ctl=None):
                  "regions": regions, "plan": []}
         if "page" in img:
             entry["page"] = img["page"]
+        if "pdf_region" in img:
+            entry["pdf_region"] = img["pdf_region"]
         cache["images"].append(entry)
         ctl.tick(i + 1, total)
     if not any(img["lines"] or img["regions"] for img in cache["images"]):
         return None
     return cache
+
+
+def build_pdf_cache(pdf_bytes, images=None, ctl=None):
+    """Image OCR plus one signature-only pass on each complete PDF page."""
+    from . import pdf_signatures
+    if images is None:
+        images = pdf_images(pdf_bytes)
+    cache = build_cache(images, ctl=ctl) if images else None
+    return pdf_signatures.add_page_pass(pdf_bytes, cache, ctl=ctl)
 
 
 def analyze_with_corpus(engine, text, cache, excluded=None, custom_terms=None,
@@ -517,7 +554,8 @@ def allocate_unreadable(cache, mapping):
                 continue
             if len(line["t"].strip()) < 2:
                 continue
-            if _in_region(line["b"], img.get("regions") or ()):
+            regions = (img.get("regions") or []) + (img.get("covered_signatures") or [])
+            if _in_region(line["b"], regions):
                 continue            # già coperta dal box firma/timbro intero
             n += 1
             added += 1
@@ -891,7 +929,26 @@ def redact_pdf_images(pdf_bytes, cache, mapping, fill=YELLOW, text=BLACK):
 
     meta = {img["key"]: img for img in cache["images"]}
     overlay = {}
+    page_signatures = {}
+    for key in list(boxes_by_key):
+        if meta[key].get("pdf_signature"):
+            page_signatures.setdefault(meta[key]["page"], []).extend(
+                boxes_by_key.pop(key))
     with fitz.open(stream=pdf_bytes, filetype="pdf") as doc:
+        # Plan every source-image mask before replacing any xref: regions can
+        # share image resources with each other and with standalone images.
+        source_boxes = {}
+        for key, boxes in boxes_by_key.items():
+            img = meta[key]
+            if img.get('pdf_region'):
+                for xref, pieces in pdf_image_regions.image_boxes(img, boxes).items():
+                    source_boxes.setdefault(xref, []).extend(pieces)
+                for member in img['pdf_region']['members']:
+                    meta.setdefault(str(member['xref']), member)
+            elif not key.startswith(PAGE_KEY):
+                source_boxes.setdefault(key, []).extend(boxes)
+        boxes_by_key = {key: boxes for key, boxes in boxes_by_key.items()
+                        if key.startswith(PAGE_KEY)} | source_boxes
         for key, boxes in boxes_by_key.items():
             img = meta[key]
             if key.startswith(PAGE_KEY):
@@ -951,6 +1008,14 @@ def redact_pdf_images(pdf_bytes, cache, mapping, fill=YELLOW, text=BLACK):
             if replaced:
                 for _b, ph in boxes:
                     by_ph[ph] = by_ph.get(ph, 0) + 1
+        if page_signatures:
+            from . import pdf_signatures
+            sig_overlay, sig_counts = pdf_signatures.redact(
+                doc, page_signatures, fill, text)
+            for pno, items in sig_overlay.items():
+                overlay.setdefault(pno, []).extend(items)
+            for ph, count in sig_counts.items():
+                by_ph[ph] = by_ph.get(ph, 0) + count
         out = doc.tobytes(garbage=3, deflate=True)
     return out, overlay, by_ph
 
@@ -1521,6 +1586,8 @@ def _sel_in_images(pdf_bytes, n, rect, cache):
                    fitz.Point(sel.x0, sel.y1), fitz.Point(sel.x1, sel.y1)]
         infos = None
         for img in cache.get("images") or []:
+            if img.get("pdf_signature"):
+                continue  # No OCR text: do not suppress selection's crop fallback.
             if img.get("page", 0) != n:
                 continue
             w, h = img.get("w") or 0, img.get("h") or 0
@@ -1528,7 +1595,11 @@ def _sel_in_images(pdf_bytes, n, rect, cache):
                 continue
             key = str(img.get("key", ""))
             placements = []                  # liste di 4 angoli in px
-            if key.startswith(PAGE_KEY):
+            if img.get('pdf_region'):
+                r = fitz.Rect(img['pdf_region']['rect'])
+                placements.append([((p.x - r.x0) * w / r.width,
+                                    (p.y - r.y0) * h / r.height) for p in corners])
+            elif key.startswith(PAGE_KEY):
                 inv = ~page.rotation_matrix
                 s = PAGE_DPI / 72.0
                 placements.append([((p * inv).x * s, (p * inv).y * s)

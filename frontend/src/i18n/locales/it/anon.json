@@ -3,6 +3,7 @@
     "title": "Categorie da anonimizzare",
     "all": "Tutte",
     "none": "Nessuna",
+    "default": "Default",
     "cyber": "Cybersecurity",
     "cyberHelp": "Credenziali e identificativi tecnici (indirizzi IP e MAC, hash di password, chiavi, certificati, wallet, nomi di macchina, IMEI e numeri di serie): riconosciuti dal formato, senza modello."
   },

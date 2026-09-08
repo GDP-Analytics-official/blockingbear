@@ -33,7 +33,7 @@ import threading
 import time
 import uuid
 from html.parser import HTMLParser
-from urllib.parse import parse_qs, quote_plus, urlparse
+from urllib.parse import parse_qs, quote_plus, urljoin, urlparse
 
 import httpx
 
@@ -331,9 +331,10 @@ def _retry_transient(fn):
 
 # --- Estrazione -------------------------------------------------------------------
 
-# Il contenuto leggibile della pagina, estratto NEL browser (dove il DOM è
-# renderizzato): via script/nav/boilerplate/elementi nascosti, link
-# preservati in forma [testo](url). La tab è usa-e-getta, quindi si può
+# Keep rendered text conservatively: semantic containers (including forms,
+# article headers and notes) can contain the entire article. Let innerText
+# handle visibility and table separators; preserve links as [label](url).
+# La tab è usa-e-getta, quindi si può
 # mutare il DOM vivo (innerText è layout-aware solo lì). `cap` limita il
 # risultato per stare nei limiti di /evaluate; `WAITMS` è l'attesa in-page
 # dell'assestamento (0 sul percorso primario: il navigate ha già atteso).
@@ -370,21 +371,28 @@ _EXTRACT_JS = """
     if (ready && text.trim()) break;
     await sleep(250);
   }
-  const kill = ['script','style','noscript','iframe','svg','canvas','nav',
-                'header','footer','aside','form','button','select','video',
-                'audio','[hidden]','[aria-hidden="true"]'];
+  // Keep styles: removing them can reveal CSS-hidden text. ARIA visibility
+  // is not visual visibility. Media requiring separate retrieval stay out.
+  const kill = ['script','noscript','template','iframe','canvas','video','audio'];
   for (const sel of kill) {
     try { document.querySelectorAll(sel).forEach(n => n.remove()); }
     catch (e) {}
   }
-  const main = document.querySelector('main,article,[role="main"]')
-               || document.body;
+  const mains = document.querySelectorAll('main,[role="main"]');
+  const main = mains.length === 1 && mains[0].getClientRects().length
+               && (mains[0].innerText || '').trim()
+               ? mains[0] : document.body;
   if (main) {
     main.querySelectorAll('a[href]').forEach(a => {
       const href = a.href || '';
-      const label = (a.textContent || '').trim().replace(/\\s+/g, ' ');
+      if (a.dataset.blockingbearTextLink) return;
+      const label = (a.innerText || '').trim().replace(/\\s+/g, ' ');
       if (/^https?:/i.test(href) && label && label.length < 200) {
-        a.textContent = '[' + label + '](' + href + ')';
+        // Preserve children and their layout, including hidden descendants.
+        // Mark links so a smaller-cap retry does not wrap them again.
+        a.prepend(document.createTextNode('['));
+        a.append(document.createTextNode('](' + href + ')'));
+        a.dataset.blockingbearTextLink = '1';
       }
     });
   }
@@ -583,23 +591,24 @@ def _read_pdf(url):
         "/", 1)[-1], "text": text, "total": len(text)}
 
 
-# quello che nel browser toglie la kill-list di _EXTRACT_JS
-_SKIP_TAGS = {"script", "style", "noscript", "template", "svg", "canvas",
-              "iframe", "nav", "header", "footer", "aside", "form", "button",
-              "select", "video", "audio"}
+# Static fallback retains the whole document: there is no rendered layout
+# to identify a visible main or apply CSS. Keep noscript's text alternative.
+_SKIP_TAGS = {"script", "style", "template", "canvas", "iframe", "video", "audio"}
 _BLOCK_TAGS = {"p", "div", "br", "li", "ul", "ol", "tr", "table", "h1", "h2",
                "h3", "h4", "h5", "h6", "section", "article", "main",
-               "blockquote", "figure", "figcaption", "dt", "dd"}
+               "blockquote", "figure", "figcaption", "dt", "dd", "form",
+               "header", "footer", "aside", "nav", "pre"}
 
 
 class _TextExtractor(HTMLParser):
-    """Testo leggibile dall'HTML statico, stessa resa di _EXTRACT_JS:
-    boilerplate via, link riscritti [testo](url)."""
+    """Conservative static text with links and explicit table separators."""
 
-    def __init__(self):
+    def __init__(self, base_url=""):
         super().__init__(convert_charrefs=True)
+        self.base_url = base_url
         self.parts, self.title = [], ""
         self._skip, self._in_title = 0, False
+        self._svg, self._pre = 0, 0
         self._href, self._link_start = None, None
 
     def handle_starttag(self, tag, attrs):
@@ -608,10 +617,18 @@ class _TextExtractor(HTMLParser):
             return
         if self._skip:
             return
-        if tag == "title":
+        if tag == "svg":
+            self._svg += 1
+        elif tag == "pre":
+            self._pre += 1
+        elif tag == "title" and not self._svg:
             self._in_title = True
         elif tag == "a":
-            href = dict(attrs).get("href") or ""
+            raw_href = dict(attrs).get("href")
+            try:
+                href = urljoin(self.base_url, raw_href) if raw_href is not None else ""
+            except ValueError:
+                href = ""       # A malformed link must not discard the following text.
             if href.startswith(("http://", "https://")):
                 self._href, self._link_start = href, len(self.parts)
         if tag in _BLOCK_TAGS:
@@ -623,7 +640,11 @@ class _TextExtractor(HTMLParser):
             return
         if self._skip:
             return
-        if tag == "title":
+        if tag == "svg":
+            self._svg = max(0, self._svg - 1)
+        elif tag == "pre":
+            self._pre = max(0, self._pre - 1)
+        elif tag == "title" and not self._svg:
             self._in_title = False
         elif tag == "a" and self._href is not None:
             label = re.sub(r"\s+", " ",
@@ -634,6 +655,8 @@ class _TextExtractor(HTMLParser):
             self._href, self._link_start = None, None
         if tag in _BLOCK_TAGS:
             self.parts.append("\n")
+        elif tag in ("td", "th"):
+            self.parts.append("\t")
 
     def handle_data(self, data):
         if self._skip:
@@ -641,20 +664,23 @@ class _TextExtractor(HTMLParser):
         if self._in_title:
             self.title += data
         else:
-            self.parts.append(data)
+            # Source indentation is not a line/cell boundary. Explicit block
+            # and cell separators above carry that structure (except in pre).
+            self.parts.append(data if self._pre else re.sub(r"\s+", " ", data))
 
 
-def _html_to_text(html):
-    parser = _TextExtractor()
+def _html_to_text(html, base_url=""):
+    parser = _TextExtractor(base_url)
     try:
         parser.feed(html)
         parser.close()
     except Exception:
         pass                    # HTML marcio: si tiene quel che c'è
-    text = re.sub(r"[ \t]+", " ", "".join(parser.parts))
-    text = re.sub(r"[ \t]*\n[ \t]*", "\n", text)
+    text = re.sub(r" +", " ", "".join(parser.parts))
+    text = re.sub(r" *\t *", "\t", text)
+    text = re.sub(r" *\n *", "\n", text)
     text = re.sub(r"\n{3,}", "\n\n", text)
-    return parser.title.strip(), text.strip()
+    return parser.title.strip(), text.strip(" \r\n")
 
 
 def _read_static(url):
@@ -674,7 +700,7 @@ def _read_static(url):
     if ctype and "html" not in ctype and "xml" not in ctype \
             and not ctype.startswith("text/"):
         raise BrowserError(f"Contenuto non leggibile ({ctype[:60]}).")
-    title, text = _html_to_text(r.text)
+    title, text = _html_to_text(r.text, str(r.url))
     if not text.strip():
         raise BrowserError("La pagina non contiene testo leggibile.")
     return {"url": str(r.url), "title": title, "text": text,

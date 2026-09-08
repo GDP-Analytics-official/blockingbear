@@ -468,6 +468,22 @@ def main():
           and res["content"].startswith(PAGE["text"][:20]),
           res["content"][:80])
 
+    # Camofox can return less than WEB_PAGE_MAX_CHARS while still reporting
+    # a larger source total. The tool must disclose that earlier truncation.
+    saved_page = dict(PAGE)
+    try:
+        PAGE["text"] = PAGE["text"][:10]
+        res = run(rp.handler(cid, {"url": "https://esempio.it/lunga"}, ctx))
+        check("browser truncation below tool cap is disclosed",
+              res["truncated"] is True and "61 caratteri totali" in res["content"])
+        PAGE["total"] = len(PAGE["text"])
+        res = run(rp.handler(cid, {"url": "https://esempio.it/breve"}, ctx))
+        check("complete short page is not marked truncated",
+              res["truncated"] is False and "pagina troncata" not in res["content"])
+    finally:
+        PAGE.clear()
+        PAGE.update(saved_page)
+
     # --- solo i tool dichiarati nel turno sono eseguibili ---------------------
     call = {"id": "c1", "function": {"name": "web_search",
                                      "arguments": '{"query": "x"}'}}

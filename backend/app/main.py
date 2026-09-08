@@ -17,6 +17,7 @@ from . import jobs
 from .config import CORS_ORIGINS, CPU_THREADS, MODEL_DIR, N_WORKERS
 from .db import init_db
 from .engine import convert
+from .errors import ApiError
 from .openrouter import provisioning, sandbox
 from .routes import (auth_routes, chat_routes, jobs_routes, projects,
                      settings_routes, setup_routes, usage_routes, users)
@@ -88,7 +89,19 @@ def health():
 @app.get("/api/tags")
 def tags():
     """Tag rilevabili, letti dal config del modello: si aggiornano da soli quando
-    si sostituisce il modello in backend/models/."""
+    si sostituisce il modello in backend/models/.
+
+    Senza checkpoint (cartella vuota: e' quello che si ottiene saltando il
+    download, perche' Docker crea la sorgente di un bind mount inesistente
+    come cartella VUOTA) risponde 503 `pii_model_missing` con il percorso, invece
+    di un 500 opaco: il wizard mostra il rimedio e non fa concludere la
+    configurazione con una lista di categorie vuota, che varrebbe "tutte
+    attive" appena il modello arriva."""
+    if not (MODEL_DIR / "config.json").is_file():
+        raise ApiError(503, "pii_model_missing",
+                       f"Modello PII non trovato: {MODEL_DIR} non contiene "
+                       "config.json. Scaricare il checkpoint in quella cartella "
+                       "e riprovare.", dir=str(MODEL_DIR))
     return jobs.ENGINES[0].tags()
 
 

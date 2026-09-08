@@ -291,11 +291,10 @@ def anonymize_pdf(pdf_bytes, engine, excluded=None, custom_terms=None, ctl=None,
     text, _ = extract_text(pdf_bytes, allow_empty=ocr)
 
     cache = None
-    images = image_ocr.pdf_images(pdf_bytes) if ocr else []
-    ctl.phases((["image_ocr"] if images else []) + ["analysis", "redaction"])
-    if images:
+    ctl.phases((["image_ocr"] if ocr else []) + ["analysis", "redaction"])
+    if ocr:
         ctl.phase("image_ocr")
-        cache = image_ocr.build_cache(images, ctl=ctl)
+        cache = image_ocr.build_pdf_cache(pdf_bytes, ctl=ctl)
     if not text.strip() and cache is None:
         raise PdfError("Il PDF non ha testo selezionabile e l'OCR non ha letto "
                        "testo nelle immagini: niente da anonimizzare.")

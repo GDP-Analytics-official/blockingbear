@@ -29,6 +29,7 @@
     "http": "Errore {{status}}",
     "network": "Server non raggiungibile: controlla che sia acceso e riprova.",
     "connectionLost": "Connessione interrotta.",
+    "pii_model_missing": "Modello PII non installato: la cartella {{dir}} non contiene config.json. Completa il download del checkpoint in quella cartella e riprova.",
 
     "token_missing": "Token mancante.",
     "session_expired": "Sessione scaduta: rifai il login.",

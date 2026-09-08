@@ -43,7 +43,8 @@
     "title": "Categories to anonymize",
     "intro": "Choose which categories of information the model must anonymize for every user. The ones already enabled are the most reliable: you can widen the selection later from the Settings page, or narrow it per project or chat.",
     "allWarning": "Warning: enabling every category increases the likelihood of false positives (text anonymized by mistake). At least at the beginning it is advisable to proceed with the default categories.",
-    "default": "Default"
+    "unavailable": "The categories come from the anonymization model, which is not available right now. Setup cannot continue without it: the management key and the administrator are already saved, so you can install the model and resume from here.",
+    "retry": "Retry"
   },
   "chat": {
     "title": "Chat rules",

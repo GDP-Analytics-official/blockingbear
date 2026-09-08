@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { usePageTitle } from '@/lib/usePageTitle.js'
+import { defaultExcluded } from '@/lib/anonDefaults.js'
 import { Trans, useTranslation } from 'react-i18next'
 import { LANGUAGES } from '@/i18n/languages.jsx'
 import { useLanguage } from '@/i18n/LanguageProvider.jsx'
@@ -163,7 +164,8 @@ function AnonDefaults({ onSaved }) {
         </select>
         <p className="text-xs text-muted-foreground">{t('anonDefaults.policyHelp')}</p>
       </div>
-      <AnonOptions tags={tags} groups={groups} value={draft} onChange={setDraft} />
+      <AnonOptions tags={tags} groups={groups} value={draft} onChange={setDraft}
+                   defaults={defaultExcluded(tags)} />
       <div className="flex items-center gap-2">
         <Button type="button" disabled={!dirty || optionsInvalid(draft) || saving} onClick={save}>
           {saving && <Loader2 className="animate-spin" />}

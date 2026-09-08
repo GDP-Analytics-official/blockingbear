@@ -394,11 +394,12 @@ async def _read_page(conv_id, args, ctx):
     except browser.BrowserError as e:
         return _web_error(str(e), started)
     content = page["text"]
-    truncated = len(content) > WEB_PAGE_MAX_CHARS
+    total = max(len(content), page.get("total") or 0)
+    truncated = total > min(len(content), WEB_PAGE_MAX_CHARS)
     if truncated:
         content = (content[:WEB_PAGE_MAX_CHARS] +
                    "\n…[pagina troncata: {} caratteri totali]…".format(
-                       page["total"]))
+                       total))
     title, final_url = page.get("title") or "", page.get("url") or url
     if anonymized:
         real = final_url

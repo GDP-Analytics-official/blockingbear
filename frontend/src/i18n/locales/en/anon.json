@@ -3,6 +3,7 @@
     "title": "Categories to anonymise",
     "all": "All",
     "none": "None",
+    "default": "Default",
     "cyber": "Cybersecurity",
     "cyberHelp": "Credentials and technical identifiers (IP and MAC addresses, password hashes, keys, certificates, wallets, host names, IMEI and serial numbers): recognised by format, no model involved."
   },

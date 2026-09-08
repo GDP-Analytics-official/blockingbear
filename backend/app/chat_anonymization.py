@@ -912,11 +912,15 @@ def _detect(data, ext, engine, defaults, ctl=None, xlsx_max_chunks=None,
     else:
         raise NotImplementedError("Formato non supportato dalla pipeline di "
                                   "anonimizzazione della chat.")
+    pdf_ocr = ocr and ext == ".pdf"
     if ctl is not None:
-        ctl.phases((["image_ocr"] if images else []) + ["analysis"])
-        if images:
+        ctl.phases((["image_ocr"] if images or pdf_ocr else []) + ["analysis"])
+        if images or pdf_ocr:
             ctl.phase("image_ocr")
-    cache = image_ocr.build_cache(images, ctl=ctl) if images else None
+    if pdf_ocr:
+        cache = image_ocr.build_pdf_cache(data, images=images, ctl=ctl)
+    else:
+        cache = image_ocr.build_cache(images, ctl=ctl) if images else None
     if not text.strip() and cache is None and ext != ".pdf" \
             and ext not in _IMAGE_EXTS:
         raise ValueError("il file non contiene testo.")
