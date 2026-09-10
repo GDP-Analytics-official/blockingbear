@@ -77,7 +77,9 @@ class ValueIndex:
 
     def matches(self, text):
         return [(ph, value) for ph, value, pat in self.candidates(text)
-                if pat.search(text)]
+                if any(not hasattr(text, "contains_span") or
+                       text.contains_span(m.start(), m.end())
+                       for m in pat.finditer(text))]
 
     def replace(self, text):
         ph = self.exact_whole.get(text, self.whole.get(canonical(text)))

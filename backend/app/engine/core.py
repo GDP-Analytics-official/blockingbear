@@ -15,6 +15,9 @@ import re
 import threading
 import unicodedata
 
+from .source_text import SourceText
+from .phone_postcheck import clean_phone, scan_phone_context
+
 from .text_patterns import WORD, canonical, literal, PLACEHOLDER_RE
 
 from .detectors import (DETECTORS, DEVICE_LABELS, EXACT_SPAN_LABELS, SOFT_REGEX_LABELS, TAG_GROUPS,
@@ -55,6 +58,21 @@ def _is_word(ch):
 def _merge(cands, text):
     """Greedy senza overlap. Priorità: checksum-valido > regex (non soft) > score
     > lunghezza. (Identica a rizzo-pii, commenti inclusi.)"""
+    if isinstance(text, SourceText):
+        # Keep contextual inference, but allocate only real source fragments.
+        # Merge/word expansion must also stay within each individual value.
+        groups = {}
+        for candidate in cands:
+            for i, start, end in text.intersections(candidate["start"], candidate["end"]):
+                offset = text.spans[i][0]
+                groups.setdefault(i, []).append(dict(candidate, start=start-offset,
+                                                     end=end-offset))
+        kept = []
+        for i, candidates in sorted(groups.items()):
+            start, end = text.spans[i]
+            kept.extend(dict(e, start=e["start"]+start, end=e["end"]+start)
+                        for e in _merge(candidates, text[start:end]))
+        return kept
     order = sorted(
         cands,
         key=lambda e: (1 if e["validated"] else 0,
@@ -147,6 +165,9 @@ def _term_pattern(term):
 # --------------------------------------------------------------------------- #
 # Post-check sull'output del MODELLO                                           #
 # --------------------------------------------------------------------------- #
+# Phone checks additionally apply a deliberate 7–15 total-digit limit and
+# reject explicit dates, currency amounts and CAP fields. They do not certify
+# a numbering plan or alter the independent regex/custom-term paths.
 # I formati con checksum sono l'unico posto dove si può dare torto al modello
 # con una prova invece che con un'euristica, ed è lì che i suoi falsi
 # positivi si vedono: un protocollo di nove cifre diventa una partita IVA, un
@@ -318,9 +339,9 @@ def _clean_cf(e, text, found):
 
 
 POST_CHECKS = {"CF": _clean_cf, "PIVA": _clean_piva, "IBAN": _clean_iban,
-               "CREDITCARDNUMBER": _clean_card}
+               "CREDITCARDNUMBER": _clean_card, "TELEPHONENUM": clean_phone}
 _SCANNERS = {"CF": _scan_cf, "PIVA": detect_eu_vat, "IBAN": scan_iban,
-             "CREDITCARDNUMBER": scan_card}
+             "CREDITCARDNUMBER": scan_card, "TELEPHONENUM": scan_phone_context}
 
 
 def post_check(ents, text):
@@ -335,6 +356,12 @@ def post_check(ents, text):
     testo vero è in mezzo a un codice."""
     found = {}
     out = []
+    if isinstance(text, SourceText):
+        # Phone lengths apply to real values, never concatenated table cells.
+        ents = [fragment for e in ents for fragment in (
+            [dict(e, start=start, end=end)
+             for _, start, end in text.intersections(e["start"], e["end"])]
+            if e["label"] == "TELEPHONENUM" else [e])]
     for e in ents:
         fn = POST_CHECKS.get(e["label"])
         if fn is None:

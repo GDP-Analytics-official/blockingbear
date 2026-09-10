@@ -487,7 +487,12 @@ def analyze_with_corpus(engine, text, cache, excluded=None, custom_terms=None,
                               custom_terms=custom_terms, ctl=ctl)
     corpus_text, spans = corpus(cache)
     base = len(text) + 2 if text else 0
-    full = (text + "\n\n" + corpus_text) if text else corpus_text
+    from .source_text import SourceText
+    if isinstance(text, SourceText):
+        ocr_text = SourceText(corpus_text, [(s, e) for s, e, *_ in spans])
+        full = SourceText.join("\n\n", [text, ocr_text]) if text else ocr_text
+    else:
+        full = (text + "\n\n" + corpus_text) if text else corpus_text
     res = engine.analyze(full, excluded=excluded,
                          custom_terms=custom_terms, ctl=ctl)
     plan_from_entities(cache, res["entities"], base, spans)

@@ -59,6 +59,9 @@ def contains_literal(text, value, placeholder):
     Word and decimal boundaries avoid finding a name inside another name or
     a small integer inside an unrelated amount.
     """
+    from .source_text import SourceText
+    if isinstance(text, SourceText):
+        return any(contains_literal(part, value, placeholder) for part in text.values())
     from .detectors import EXACT_SPAN_LABELS
     exact = placeholder.strip("[]").rsplit("_", 1)[0] in EXACT_SPAN_LABELS
     haystack, needle = (text, value) if exact else (canonical(text), canonical(value))

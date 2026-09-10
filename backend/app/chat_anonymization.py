@@ -574,6 +574,8 @@ class ConversationEngine:
                                      include_aliases=True,
                                      exclude=skip).for_text(text)
         forced = _forced_spans(text, known)
+        if hasattr(text, "contains_span"):
+            forced = [span for span in forced if text.contains_span(span[0], span[1])]
 
         kept, superseded = [], set()
         for found in result["entities"]:

@@ -87,6 +87,7 @@ import xml.etree.ElementTree as ET
 
 from .. import settings_store
 from . import image_ocr, xlsx_table
+from .source_text import SourceText
 from .core import _norm as _norm_value
 from .docx import (_alt_text_surfaces, _meta_surfaces, _part_namespaces,
                    _RelsValues, _scrub_alt_text, _scrub_app_props,
@@ -341,12 +342,12 @@ def _sheet_text(root, sst, enriched=False, full=False):
             parts = []
             for col, txt, _ in cells:
                 lab = header.get(col, "")
-                parts.append(f"{lab}: {txt}" if lab else txt)
-            lines.append(" | ".join(parts))
+                parts.append(SourceText.labeled(lab, txt) if lab else txt)
+            lines.append(SourceText.join(" | ", parts))
         else:
-            lines.append(" | ".join(txt for _, txt, _ in cells))
+            lines.append(SourceText.join(" | ", [txt for _, txt, _ in cells]))
     lines.extend(_sheet_extra_lines(root, full=full))
-    return "\n".join(lines)
+    return SourceText.join("\n", lines)
 
 
 def _sheet_extra_lines(root, full=False):
@@ -369,7 +370,7 @@ def _sheet_extra_lines(root, full=False):
     if attrs:
         # " | " e non "\n": la tolleranza di sillabazione di _value_pattern
         # (cifra-\n-cifra) farebbe match FANTASMA attraverso valori distinti
-        lines.append(" | ".join(attrs))
+        lines.append(SourceText.join(" | ", attrs))
     return lines
 
 
@@ -408,7 +409,7 @@ def extract_text(xlsx_bytes, full=False, enriched=False):
         if t.strip():
             texts.append(t)
     texts.extend(_aux_texts(zf, names, full=full))
-    text = "\n".join(texts)
+    text = SourceText.join("\n", texts)
     if not text.strip():
         raise XlsxError("Il file Excel non contiene testo.")
     return text
@@ -438,20 +439,20 @@ def _aux_texts(zf, names, full=False):
         texts.extend(_drawing_text(root))
         vals = _plain_texts(root, {"v", "pt"})
         if vals:
-            texts.append(" | ".join(vals))   # vedi nota su " | " in _sheet_text
+            texts.append(SourceText.join(" | ", vals))   # vedi nota su " | " in _sheet_text
     if full:
         for name in sorted(n for n in names if _PERSONS_RE.match(n)):
             root = ET.fromstring(zf.read(name))
             vals = [el.get(attr) for el in root.iter()
                     for attr in ("displayName", "userId") if el.get(attr)]
             if vals:
-                texts.append(" | ".join(vals))
+                texts.append(SourceText.join(" | ", vals))
         for name in sorted(n for n in names if _ATTR_PART_RE.match(n)):
             root = ET.fromstring(zf.read(name))
             vals = [v for el in root.iter()
                     for v in el.attrib.values() if v and v.strip()]
             if vals:
-                texts.append(" | ".join(vals))
+                texts.append(SourceText.join(" | ", vals))
     return texts
 
 
@@ -1725,25 +1726,25 @@ def anonymize_xlsx(xlsx_bytes, engine, excluded=None, custom_terms=None,
         # nomi propri (misurato: 'Marchio' -> FULLNAME). Le etichette il
         # modello le vede dove servono davvero, cioè come prefisso delle
         # coppie del campione, dove sono contesto e non candidati.
-        lines = [" | ".join(t for _c, t, _s in cells)
+        lines = [SourceText.join(" | ", [t for _c, t, _s in cells])
                  for _ri, cells in rows[:det["header_pos"]]]
         hay_texts.extend(lines)
         for _ri, cells in sampled:
-            lines.append(" | ".join(
-                f"{header[c]}: {t}" if c in header else t for c, t, _s in cells))
+            lines.append(SourceText.join(" | ", [
+                SourceText.labeled(header[c], t) if c in header else t for c, t, _s in cells]))
         stray = [t for _ri, cells in data
                  for c, t, _s in cells if c not in header]
         if stray:               # celle fuori dalle colonne (<=5%): al modello
-            lines.append(" | ".join(stray))
+            lines.append(SourceText.join(" | ", stray))
             hay_texts.extend(stray)
         lines.extend(_sheet_extra_lines(root))
-        texts.append("\n".join(lines))
+        texts.append(SourceText.join("\n", lines))
         plans.append({"sheet": sheet_name or part, "header": header,
                       "data": data, "sampled": sampled})
     aux = _aux_texts(zf, names)
     texts.extend(aux)
     hay_texts.extend(aux)
-    text = "\n".join(t for t in texts if t.strip())
+    text = SourceText.join("\n", [t for t in texts if t.strip()])
     images = image_ocr.ooxml_images(xlsx_bytes) if ocr else []
     if not text.strip() and not images:
         raise XlsxError("Il file Excel non contiene testo.")
@@ -1848,11 +1849,11 @@ def anonymize_xlsx(xlsx_bytes, engine, excluded=None, custom_terms=None,
             else:                       # nessun segnale: rete di sicurezza
                 regex_vals.extend(vals)
         if regex_vals:
-            joined = "\n".join(regex_vals)
+            joined = SourceText.join("\n", regex_vals)
             whole = {_norm_value(v) for v in regex_vals}
             for e in detect_regex(joined):
                 val = joined[e["start"]:e["end"]]
-                if "\n" in val or e["label"] in excluded_set:
+                if not joined.contains_span(e["start"], e["end"]) or e["label"] in excluded_set:
                     continue
                 add(e["label"], val, whole)
 
@@ -1862,7 +1863,7 @@ def anonymize_xlsx(xlsx_bytes, engine, excluded=None, custom_terms=None,
         # completata all'istante): la numerazione promessa all'utente regge
         ctl.phase("analysis_columns")
     if model_uniques:
-        joined = "\n".join(model_uniques)
+        joined = SourceText.join("\n", model_uniques)
         n2 = len(chunk_text(joined))
         if max_chunks and n_chunks + n2 > max_chunks:
             raise _chunk_cap_error(n_chunks + n2, max_chunks)
@@ -1870,7 +1871,7 @@ def anonymize_xlsx(xlsx_bytes, engine, excluded=None, custom_terms=None,
                               ctl=ctl)
         whole = {_norm_value(v) for v in model_uniques}
         for e in res2["entities"]:
-            if "\n" not in e["value"]:      # a cavallo di due valori: scarto
+            if joined.contains_span(e["start"], e["end"]):
                 add(e["label"], e["value"], whole)
 
     if not mapping:
@@ -2036,7 +2037,7 @@ def residual_text(xlsx_bytes):
             except ET.ParseError:
                 continue
     zf.close()
-    return text + "\n" + "\n".join(extra)
+    return SourceText.join("\n", [text, *extra])
 
 
 def _verify_residuals(xlsx_bytes, items, exact=None):
@@ -2054,11 +2055,11 @@ def _verify_residuals(xlsx_bytes, items, exact=None):
         all_items.extend(exact.index.items)
     residual = []
     for ph, val, pat in ValueIndex(all_items).candidates(haystack):
-        if pat.search(haystack) or contains_literal(haystack, val, ph):
+        if any(haystack.contains_span(m.start(), m.end())
+               for m in pat.finditer(haystack)) or contains_literal(haystack, val, ph):
             residual.append(ph)
     if exact:
-        segments = {_norm_value(seg) for line in haystack.split("\n")
-                    for seg in line.split(" | ")}
+        segments = {_norm_value(seg) for seg in haystack.values()}
         for nv, ph in exact.items():
             if nv in segments:
                 residual.append(ph)
