@@ -54,6 +54,14 @@
       "label": "Spending cap per single answer (US cents)",
       "help": "An answer can cost more than it looks: the model runs code several times and each round re-sends the whole conversation. Once the cap is reached, the model is told to stop running code and answer with what it has (the answer still arrives). 0 = no cap."
     },
+    "chat_max_tool_rounds": {
+      "label": "Tool rounds per single answer (maximum)",
+      "help": "Every code execution, search or page read is one round, and every round re-sends the whole conversation to the model. Once the maximum is reached, the model is told to stop using tools and answer with what it has (the answer still arrives). Works together with the spending cap: the answer closes at whichever comes first."
+    },
+    "chat_exec_timeout_s": {
+      "label": "Timeout of a single code execution (seconds)",
+      "help": "Beyond it, the execution is interrupted and the model receives a “timeout” outcome; the environment survives, with the variables already computed. Raise it if the model works on large files or converts documents with LibreOffice in the sandbox."
+    },
     "chat_model_attach_mb": {
       "label": "Maximum size of a file sent to the model (MB)",
       "help": "Images and PDFs are shown DIRECTLY to the model (where supported), so they travel in every request of the turn and are paid for as tokens: above this threshold the file stays in the sandbox only, where the model opens it with code."
@@ -61,6 +69,10 @@
     "chat_web_search": {
       "label": "Allow web search in chats",
       "help": "Adds two read-only tools to the model (search and page reading) through a browser local to the server. CAREFUL with anonymised chats: search queries leave towards the engine (DuckDuckGo) with the REAL values — the protection covers the path towards the LLM provider, which keeps seeing only placeholders: content fetched from the web comes back anonymised and goes through the egress check. On values not yet known to the registry the protection of web text is best-effort. Every user can turn the search off in a single conversation."
+    },
+    "chat_web_page_max_chars": {
+      "label": "Maximum length of a web page read (characters)",
+      "help": "Text beyond the cap is cut, with a note stating the total length. Every page read stays in the conversation and is paid for as tokens in every following request: lower it to spend less on long research, raise it if the model misses the bottom of pages."
     },
     "chat_ai_marking": {
       "label": "Mark AI-generated files (AI Act, Art. 50)",

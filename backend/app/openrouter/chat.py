@@ -37,8 +37,11 @@ Vincoli OpenRouter cablati qui (documentazione ufficiale, snapshot 2026-08):
   - reasoning_details va rimandato indietro INVARIATO nel messaggio assistant
     (i blocchi si ricostruiscono concatenando i frammenti in ordine), o i
     modelli reasoning degradano/rifiutano nel tool calling;
-  - `tools` va dichiarato in OGNI richiesta del loop, con
-    provider.require_parameters per non finire su endpoint che li ignorano;
+  - `tools` va dichiarato in OGNI richiesta del loop, di norma con
+    provider.require_parameters per non finire su endpoint che li ignorano.
+    Ma require_parameters rende DURO ogni parametro della richiesta e il
+    routing può svuotarsi (404 pre-stream, non fatturato): da qui la scala
+    di rilassamento _ROUTING_RELAXED, più sotto;
   - errori a metà stream = HTTP 200 + chunk con "error" top-level;
   - le input_modalities del catalogo sono del MODELLO, non dell'endpoint:
     l'endpoint ZDR di un provider può rifiutare i PDF nativi che il modello
@@ -48,12 +51,17 @@ Vincoli OpenRouter cablati qui (documentazione ufficiale, snapshot 2026-08):
     lo legge con gli strumenti — e il modello si segna come "niente file
     nativi" per i turni successivi (file_input_refused);
   - session_id (sticky routing) + cache_control top-level (caching automatico
-    Anthropic/Vertex/Azure/Bedrock): con 12 iterazioni che rispediscono tutta
+    Anthropic/Vertex/Azure/Bedrock): con decine di iterazioni che rispediscono tutta
     la conversazione il caching non è un'ottimizzazione, è il conto sano.
 
 Stop condition: timeout per esecuzione (lo applica il kernel,
-che sopravvive), tetto di iterazioni, tetto di wall clock, budget di costo,
-annullamento utente (evento asyncio). L'annullamento a metà tool fa effetto
+che sopravvive), tetto di iterazioni, budget di costo, annullamento utente
+(evento asyncio). NESSUN tetto sul tempo totale del turno: un modello lento
+o una pagina che tarda non chiudono la risposta a metà — la chiudono solo i
+tetti qui sopra e il bottone «ferma». I tetti sono parametri di esercizio
+(settings_store), letti dalla route a ogni turno e passati qui: valgono dal
+messaggio successivo al salvataggio nel pannello, senza riavvio.
+L'annullamento a metà tool fa effetto
 SUBITO: l'attesa si sgancia (_run_tool), il lavoro finisce orfano nel suo
 thread e il risultato si scarta.
 """
@@ -63,7 +71,7 @@ import json
 import logging
 import time
 
-from ..config import SANDBOX_EXEC_TIMEOUT, SANDBOX_MAX_ITER
+from .. import settings_store
 from . import client as or_client
 from . import tools as tool_registry
 
@@ -134,6 +142,128 @@ def _strip_file_parts(messages):
         else:
             m["content"] = parts
     return n
+
+
+# --- Rifiuti di routing --------------------------------------------------------
+# OpenRouter sceglie l'endpoint con un IMBUTO di filtri, tutti duri: privacy
+# (zdr / data_collection), parametri (con provider.require_parameters ogni
+# parametro della richiesta deve stare nella supported_parameters
+# dell'endpoint), regione, tier... Quando l'imbuto si svuota la risposta è un
+# 404 PRIMA di chiamare un provider (niente costo, ~300 ms) con
+# error.metadata.routing_funnel e failed_routing_step. Due cose lo rendono
+# fragile per noi (tutto visto dal vero il 2026-09-11):
+#   - le supported_parameters del CATALOGO sono l'UNIONE degli endpoint, la
+#     verifica di require_parameters è per singolo endpoint: un parametro che
+#     solo alcuni endpoint accettano (temperature su Azure per
+#     anthropic/claude-opus-5, max_tokens su OpenAI ma non su Azure per
+#     openai/gpt-5.5) restringe la rosa, e il filtro privacy che viene DOPO
+#     può azzerarla — con un messaggio che parla di "data policy" mentre la
+#     causa è il parametro;
+#   - tool_choice lo aggiungiamo noi (risposta finale forzata) e nessuno lo
+#     valida: anthropic/claude-fable-5.1 non lo dichiara su nessun endpoint,
+#     e la richiesta finale di un turno da 10 iterazioni e 1 $ di ricerche
+#     moriva lì, "No endpoints found that can handle the requested
+#     parameters".
+# La difesa è una SCALA di rilassamento per (modello, regole privacy strette),
+# in RAM come _FILE_INPUT_REFUSED (al riavvio si riparte dal gradino 0, che è
+# il modo di accorgersi se OpenRouter ha aggiornato i metadati):
+#   0  provider.require_parameters, più tool_choice quando serve: la garanzia
+#      che l'endpoint sappia usare i tool;
+#   1  senza tool_choice (i tool result «budget esaurito» restano l'unico
+#      freno, vedi _FINAL_RETRIES); la garanzia sui tool resta;
+#   2  senza require_parameters: i parametri tornano preferenze morbide — la
+#      documentazione dice che tools e response_format lo sono comunque — e
+#      l'endpoint ignora quelli che non conosce.
+# Le regole privacy NON si toccano mai: zdr e data_collection restano come la
+# route li ha decisi. Si sale solo se l'imbuto dice (o non esclude) che i
+# parametri hanno contribuito: un modello senza endpoint ZDR fallisce al
+# filtro privacy con l'imbuto ancora pieno, e lì non c'è niente da rilassare.
+_ROUTING_RELAXED = {}
+
+_LEVEL_STRICT = 0
+_LEVEL_NO_TOOL_CHOICE = 1
+_LEVEL_SOFT = 2
+_LEVEL_NAMES = {_LEVEL_NO_TOOL_CHOICE: "senza tool_choice",
+                _LEVEL_SOFT: "senza require_parameters"}
+
+_STEP_PARAMETERS = "Filter by Parameters"
+_STEP_DATA_POLICY = "Filter by Data Policy"
+
+# Quante volte si rimanda il "rispondi ora" a un modello che, con il budget
+# esaurito, chiama ancora dei tool. Una: ogni richiesta rispedisce tutto il
+# contesto, e un modello che ignora due rifiuti di fila non si convince.
+_FINAL_RETRIES = 1
+
+
+def routing_level(model, provider=None):
+    """Il gradino della scala già raggiunto per questo modello con queste
+    regole privacy (0 = richieste strette, nessun rilassamento)."""
+    return _ROUTING_RELAXED.get((model, _strict_privacy(provider)), 0)
+
+
+def _failed_step(err):
+    return err.metadata.get("failed_routing_step") or ""
+
+
+def _is_routing_refusal(err):
+    """OpenRouter non ha trovato un endpoint PRIMA di chiamarne uno: lo dice
+    il metadata, o il messaggio quando il metadata manca (mock, risposte
+    vecchie). Un 5xx del provider a metà strada non passa di qui."""
+    if _failed_step(err):
+        return True
+    return (err.status in (404, 503)
+            and "no endpoints found" in str(err).lower())
+
+
+def _is_data_policy_refusal(err):
+    return (_failed_step(err) == _STEP_DATA_POLICY
+            or "data policy" in str(err).lower())
+
+
+def _is_parameters_refusal(err):
+    return (_failed_step(err) == _STEP_PARAMETERS
+            or "requested parameters" in str(err).lower())
+
+
+def _params_narrowed(err):
+    """I parametri hanno contribuito a svuotare l'imbuto? True se il filtro
+    parametri ha fallito o ha scartato endpoint (anche se poi a fallire è
+    stato un filtro successivo), False se l'imbuto dice che non c'entrano,
+    None se la risposta non porta l'imbuto: non si può escludere, si prova."""
+    if _is_parameters_refusal(err):
+        return True
+    funnel = err.metadata.get("routing_funnel")
+    if not isinstance(funnel, list):
+        return None
+    prev = None
+    for step in funnel:
+        if not isinstance(step, dict):
+            continue
+        count = step.get("endpoint_count")
+        if step.get("step") == _STEP_PARAMETERS:
+            return bool(prev is not None and isinstance(count, int)
+                        and count < prev)
+        if isinstance(count, int):
+            prev = count
+    return False
+
+
+def _relax_routing(err, payload, key):
+    """Il prossimo gradino della scala dopo un rifiuto di routing, o None se
+    non c'è niente da rilassare: il rifiuto non dipende dai parametri, la
+    richiesta era già morbida (livello 2, o chat senza tool). Aggiorna
+    _ROUTING_RELAXED."""
+    if not _is_routing_refusal(err) or _params_narrowed(err) is False:
+        return None
+    if not (payload.get("provider") or {}).get("require_parameters"):
+        return None
+    level = (_LEVEL_NO_TOOL_CHOICE
+             if "tool_choice" in payload
+             and _ROUTING_RELAXED.get(key, 0) < _LEVEL_NO_TOOL_CHOICE
+             else _LEVEL_SOFT)
+    _ROUTING_RELAXED[key] = level
+    return level
+
 
 EXECUTE_PYTHON_TOOL = python_tool()
 
@@ -298,8 +428,9 @@ def _merge_reasoning_detail(acc, detail):
 
 async def run_turn(conv_id, messages, model, api_key, *,
                    files=None, tools=None, reasoning=None, params=None,
-                   provider=None, session_id=None, max_iter=None,
-                   exec_timeout=None, wall_clock=600.0, cost_limit=None,
+                   provider=None, supported_params=None, session_id=None,
+                   max_iter=None, exec_timeout=None, page_max_chars=None,
+                   cost_limit=None,
                    base_url=None, cancel=None, anonymized=False, scope=None):
     """Un turno di conversazione completo: richieste a OpenRouter ed
     esecuzioni tool alternate finché il modello non produce la risposta
@@ -314,6 +445,14 @@ async def run_turn(conv_id, messages, model, api_key, *,
     l'hanno escluso non si aggirano chiamandolo lo stesso).
     reasoning/params/provider: passthrough verso OpenRouter, già validati
     sui metadati del modello (catalog.sanitize_options) dalla route.
+    supported_params: le supported_parameters del modello nel catalogo (None
+    = modello sconosciuto). Servono per NON spedire tool_choice a un modello
+    che non lo dichiara: la lista è l'unione degli endpoint, quindi se manca
+    lì manca ovunque, e con require_parameters sarebbe un 404 sicuro.
+    max_iter/exec_timeout/page_max_chars: i tetti del turno (giri di tool,
+    secondi per singola esecuzione, caratteri per pagina letta); None = il
+    valore corrente del parametro di esercizio (settings_store). cost_limit:
+    tetto di spesa in dollari, None = nessuno.
     anonymized/scope: il contesto privacy per i handler dei tool web (scope =
     registro del progetto per le chat di progetto; default conv_id).
     cancel: asyncio.Event opzionale, il bottone "ferma" della UI."""
@@ -321,8 +460,11 @@ async def run_turn(conv_id, messages, model, api_key, *,
         tools = [EXECUTE_PYTHON_TOOL]
     allowed = {t["function"]["name"] for t in tools
                if isinstance(t, dict) and t.get("function")}
-    max_iter = max_iter or SANDBOX_MAX_ITER
-    exec_timeout = exec_timeout or SANDBOX_EXEC_TIMEOUT
+    max_iter = max_iter or settings_store.current("chat_max_tool_rounds")
+    exec_timeout = (exec_timeout
+                    or settings_store.current("chat_exec_timeout_s"))
+    page_max_chars = (page_max_chars
+                      or settings_store.current("chat_web_page_max_chars"))
     session = (session_id or f"blockingbear-{conv_id}")[:256]
     started = time.monotonic()
     totals = {"prompt_tokens": 0, "completion_tokens": 0, "cost": 0.0}
@@ -333,6 +475,10 @@ async def run_turn(conv_id, messages, model, api_key, *,
     first_token_at = None   # primo segno di attività del modello (monotonic)
     last_usage = None       # usage dell'ultima iterazione (vedi docstring)
     files_dropped = False   # PDF nativi già tolti dopo un rifiuto del routing
+    routing_key = (model, _strict_privacy(provider))
+    tool_choice_ok = (supported_params is None
+                      or "tool_choice" in supported_params)
+    final_attempts = 0      # "rispondi ora" ignorati dal modello (v. _FINAL_RETRIES)
 
     def _done(reason):
         usage = dict(totals)
@@ -352,8 +498,6 @@ async def run_turn(conv_id, messages, model, api_key, *,
     def _budget_reason():
         if iterations >= max_iter:
             return f"tetto di {max_iter} iterazioni"
-        if time.monotonic() - started > wall_clock:
-            return f"tetto di {int(wall_clock)} s di elaborazione"
         if cost_limit is not None and totals["cost"] >= cost_limit:
             return f"tetto di costo di {cost_limit}$"
         return None
@@ -365,6 +509,7 @@ async def run_turn(conv_id, messages, model, api_key, *,
                 yield _done("canceled")
                 return
 
+            level = _ROUTING_RELAXED.get(routing_key, _LEVEL_STRICT)
             payload = {
                 "model": model, "messages": messages, "stream": True,
                 "session_id": session,
@@ -372,15 +517,19 @@ async def run_turn(conv_id, messages, model, api_key, *,
             }
             if tools:
                 payload["tools"] = tools
-                payload["provider"] = {"require_parameters": True,
-                                       **(provider or {})}
+                prefs = dict(provider or {})
+                if level < _LEVEL_SOFT:
+                    prefs["require_parameters"] = True
+                if prefs:
+                    payload["provider"] = prefs
             elif provider:
                 payload["provider"] = provider
             if reasoning:
                 payload["reasoning"] = reasoning
             for key, value in (params or {}).items():
                 payload.setdefault(key, value)    # mai sopra model/messages
-            if force_final:
+            if (force_final and tool_choice_ok
+                    and level != _LEVEL_NO_TOOL_CHOICE):
                 payload["tool_choice"] = "none"
 
             # --- una risposta streamata di OpenRouter -----------------------
@@ -442,6 +591,18 @@ async def run_turn(conv_id, messages, model, api_key, *,
                         "native PDF parts", conv_id, model,
                         _strict_privacy(provider))
                     continue
+                relaxed = _relax_routing(e, payload, routing_key)
+                if relaxed is not None:
+                    # imbuto di routing vuoto per colpa dei parametri: la
+                    # richiesta non è costata niente, si riparte con gli
+                    # stessi messaggi dal gradino successivo della scala
+                    log.warning(
+                        "OpenRouter routing refused conversation=%s model=%s "
+                        "strict_privacy=%s step=%r: relaxing to level %d "
+                        "(%s)", conv_id, model, routing_key[1],
+                        _failed_step(e) or str(e)[:80], relaxed,
+                        _LEVEL_NAMES[relaxed])
+                    continue
                 yield {"type": "error", "source": "openrouter",
                        "status": e.status, "code": e.code,
                        "message": _explain(e, payload)}
@@ -485,14 +646,30 @@ async def run_turn(conv_id, messages, model, api_key, *,
 
             if not tool_calls or force_final:
                 if tool_calls:
-                    # il modello ha ignorato tool_choice=none: si chiude ogni
-                    # chiamata con un rifiuto, o la storia resterebbe invalida
-                    # (tool call senza tool result) per il turno successivo
+                    # il modello ha ignorato l'ordine di rispondere (senza
+                    # tool_choice è solo un testo nei tool result, e nemmeno
+                    # tool_choice=none è garantito): si chiude ogni chiamata
+                    # con un rifiuto, o la storia resterebbe invalida (tool
+                    # call senza tool result) per il turno successivo
+                    reason = _budget_reason() or "turno chiuso"
                     for call in tool_calls:
-                        messages.append(_tool_message(call["id"], {
-                            "stdout": "", "outcome": "budget_exceeded",
-                            "stderr": _BUDGET_MSG.format("turno chiuso"),
-                            "new_files": [], "elapsed_ms": 0}))
+                        result = {"stdout": "",
+                                  "stderr": _BUDGET_MSG.format(reason),
+                                  "outcome": "budget_exceeded",
+                                  "new_files": [], "files": {},
+                                  "elapsed_ms": 0}
+                        yield {"type": "tool_result", "id": call["id"],
+                               "result": result}
+                        messages.append(_tool_message(call["id"], result))
+                    if final_attempts < _FINAL_RETRIES:
+                        # un'altra possibilità: ha appena letto i rifiuti.
+                        # Poi il turno si chiude com'è, senza risposta
+                        final_attempts += 1
+                        log.warning(
+                            "model ignored the forced final answer "
+                            "conversation=%s model=%s: one more request",
+                            conv_id, model)
+                        continue
                 yield _done(finish_reason or "stop")
                 return
 
@@ -509,7 +686,8 @@ async def run_turn(conv_id, messages, model, api_key, *,
                 force_final = True
                 continue
 
-            ctx = {"exec_timeout": exec_timeout, "files": files,
+            ctx = {"exec_timeout": exec_timeout,
+                   "page_max_chars": page_max_chars, "files": files,
                    "anonymized": anonymized, "scope": scope or conv_id}
             parsed = [(call, *_parse_call(call, allowed))
                       for call in tool_calls]
@@ -550,23 +728,39 @@ async def run_turn(conv_id, messages, model, api_key, *,
         await http.aclose()
 
 
+_NO_ZDR_MSG = ("Nessun provider conforme alle regole privacy per questo "
+               "modello: non ha endpoint con Zero Data Retention. Scegli un "
+               "altro modello, oppure (da amministratore) consenti la deroga "
+               "per questa conversazione. Risposta di OpenRouter: {err}")
+
+
 def _explain(err, payload):
-    """L'errore come lo leggerà l'utente. Un caso merita una spiegazione
-    invece del messaggio grezzo del router: il 503 con le regole privacy
-    attive non è un guasto né un modello rotto — è OpenRouter che non trova
-    un provider conforme per quel modello."""
+    """L'errore come lo leggerà l'utente. I rifiuti di routing meritano una
+    spiegazione invece del messaggio grezzo del router: con le regole
+    privacy attive "nessun endpoint" non è un guasto né un modello rotto — è
+    OpenRouter che non trova un provider conforme per quel modello. Si
+    riconoscono dal metadata e dal testo, non dallo status: OpenRouter ha
+    risposto 503 (snapshot 2026-08) e oggi risponde 404 allo stesso caso."""
     prefs = payload.get("provider") or {}
-    strict = prefs.get("zdr") or prefs.get("data_collection") == "deny"
+    strict = _strict_privacy(prefs)
     if _is_file_input_refusal(err):
         return ("Il provider scelto per questo modello non accetta i PDF "
                 "come allegato nativo"
                 + (" con le regole privacy attive" if strict else "")
                 + f". Risposta di OpenRouter: {err}")
+    if _is_routing_refusal(err):
+        if _params_narrowed(err):
+            # si arriva qui solo se anche l'ultimo gradino della scala ha
+            # fallito (o la richiesta era già morbida)
+            return ("Nessun endpoint di questo modello accetta tutti i "
+                    "parametri della richiesta"
+                    + (" insieme alle regole privacy attive" if strict
+                       else "")
+                    + f". Risposta di OpenRouter: {err}")
+        if strict and _is_data_policy_refusal(err):
+            return _NO_ZDR_MSG.format(err=err)
     if err.status == 503 and strict:
-        return ("Nessun provider conforme alle regole privacy per questo "
-                "modello: non ha endpoint con Zero Data Retention. Scegli un "
-                "altro modello, oppure (da amministratore) consenti la deroga "
-                f"per questa conversazione. Risposta di OpenRouter: {err}")
+        return _NO_ZDR_MSG.format(err=err)
     return str(err)
 
 

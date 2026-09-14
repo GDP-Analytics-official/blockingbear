@@ -38,12 +38,20 @@ _MGMT_KEY_FILE = DATA_DIR / "openrouter_management.key"
 
 
 class OpenRouterError(RuntimeError):
-    """Errore restituito da OpenRouter prima dell'inizio dello streaming."""
+    """Errore restituito da OpenRouter prima dell'inizio dello streaming.
 
-    def __init__(self, message, status=None, code=None):
+    `metadata` è il blocco error.metadata della risposta, quando c'è. Per i
+    rifiuti di routing (nessun endpoint) porta `routing_funnel` — quanti
+    endpoint restavano dopo ogni filtro superato — e `failed_routing_step`,
+    il filtro che li ha azzerati: è quello che dice PERCHÉ manca un endpoint,
+    il messaggio da solo no (parla di "data policy" anche quando a
+    restringere la rosa è stato un parametro). Sempre un dict, anche vuoto."""
+
+    def __init__(self, message, status=None, code=None, metadata=None):
         super().__init__(message)
         self.status = status
         self.code = code
+        self.metadata = metadata if isinstance(metadata, dict) else {}
 
 
 # --- Management key (storage; gli endpoint arrivano con le route) ------------
@@ -84,7 +92,8 @@ def _error_from_response(status, body_bytes):
     try:
         err = json.loads(body_bytes)["error"]
         return OpenRouterError(err.get("message") or "Errore OpenRouter",
-                               status=status, code=err.get("code"))
+                               status=status, code=err.get("code"),
+                               metadata=err.get("metadata"))
     except (ValueError, KeyError, TypeError):
         text = body_bytes.decode("utf-8", "replace")[:300]
         return OpenRouterError(f"Errore OpenRouter (HTTP {status}): {text}",

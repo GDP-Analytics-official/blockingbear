@@ -45,9 +45,9 @@ import uuid
 from collections import deque
 from pathlib import Path
 
-from ..config import (DATA_DIR, SANDBOX_ENGINE, SANDBOX_EXEC_TIMEOUT,
-                      SANDBOX_IDLE_MIN, SANDBOX_IMAGE, SANDBOX_MAX,
-                      SANDBOX_MEM, SANDBOX_POOL)
+from .. import settings_store
+from ..config import (DATA_DIR, SANDBOX_ENGINE, SANDBOX_IDLE_MIN,
+                      SANDBOX_IMAGE, SANDBOX_MAX, SANDBOX_MEM, SANDBOX_POOL)
 from ..logging_setup import get_logger
 
 log = get_logger("blockingbear.sandbox")
@@ -466,7 +466,9 @@ def execute(conv_id, code, timeout=None, files=None):
     if _engine is None or _closing:
         raise SandboxUnavailable(
             "Nessun runtime container disponibile: sandbox disattivata.")
-    timeout = int(timeout or SANDBOX_EXEC_TIMEOUT)
+    # None = il parametro di esercizio corrente (chat.py lo passa già
+    # risolto nel ctx del turno; qui ricadono i chiamanti diretti)
+    timeout = int(timeout or settings_store.current("chat_exec_timeout_s"))
 
     notice = None
     with _lock:

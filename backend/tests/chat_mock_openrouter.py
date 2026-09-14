@@ -22,6 +22,18 @@ Modelli finti:
                      `file` con 404 "No endpoints found that support file
                      input" (come x-ai/grok-4.6 dal vero); senza parti file
                      risponde come testo puro
+  test/strict-model  anthropic/claude-fable-5.1 dal vero (2026-09-11):
+                     dichiara tools ma NON tool_choice. Con
+                     provider.require_parameters risponde 404 "No endpoints
+                     found that can handle the requested parameters" se la
+                     richiesta porta tool_choice, e 404 "data policy" (con
+                     l'imbuto che mostra il filtro parametri) se porta
+                     temperature sotto zdr. Chiama execute_python finché non
+                     legge un tool result «budget esaurito» (TESTARDO nel
+                     messaggio utente: ignora il primo)
+  test/nozdr404-model  nessun endpoint ZDR, alla maniera di oggi: 404 "data
+                     policy" con routing_funnel pieno (i parametri non
+                     c'entrano, non c'è niente da rilassare)
 
 GET /debug/requests restituisce i body ricevuti: è così che i test
 verificano cosa è stato spedito davvero (echo del reasoning, tools in ogni
@@ -129,6 +141,24 @@ _MODELS = [
                     "rifiuta.",
      "context_length": 8000,
      "architecture": {"input_modalities": ["text", "image", "file"],
+                      "output_modalities": ["text"]},
+     "pricing": {"prompt": "0", "completion": "0"},
+     "top_provider": {}, "supported_parameters": ["max_tokens", "tools"]},
+    {"id": "test/strict-model", "name": "Strict Routing Model",
+     "description": "Dichiara tools ma non tool_choice: con "
+                    "require_parameters il routing si svuota (come "
+                    "anthropic/claude-fable-5.1).",
+     "context_length": 8000,
+     "architecture": {"input_modalities": ["text"],
+                      "output_modalities": ["text"]},
+     "pricing": {"prompt": "0", "completion": "0"},
+     "top_provider": {},
+     "supported_parameters": ["tools", "max_tokens", "temperature"]},
+    {"id": "test/nozdr404-model", "name": "No ZDR Model (404)",
+     "description": "Nessun endpoint Zero Data Retention: 404 con "
+                    "routing_funnel, come OpenRouter oggi.",
+     "context_length": 8000,
+     "architecture": {"input_modalities": ["text"],
                       "output_modalities": ["text"]},
      "pricing": {"prompt": "0", "completion": "0"},
      "top_provider": {}, "supported_parameters": ["max_tokens", "tools"]},
@@ -320,6 +350,28 @@ def analytics_meta(request: Request):
                      "granularities": ["day", "week", "month"]}}
 
 
+def _routing_refusal(message, funnel, failed):
+    """Il 404 pre-stream di OpenRouter a imbuto vuoto, con lo stesso metadata
+    del vero: routing_funnel elenca i filtri superati e quanti endpoint
+    restavano dopo ciascuno, failed_routing_step è quello che li ha
+    azzerati."""
+    return JSONResponse(status_code=404, content={"error": {
+        "code": 404, "message": message,
+        "metadata": {
+            "routing_funnel": [{"step": step, "endpoint_count": n}
+                               for step, n in funnel],
+            "failed_routing_step": failed}}})
+
+
+_PARAMS_REFUSED_MSG = (
+    "No endpoints found that can handle the requested parameters. To learn "
+    "more about provider routing, visit: "
+    "https://openrouter.ai/docs/guides/routing/provider-selection")
+_DATA_POLICY_MSG = ("No endpoints found matching your data policy (Zero data "
+                    "retention). Configure: https://openrouter.ai/settings/"
+                    "privacy")
+
+
 @app.post("/api/v1/chat/completions")
 async def completions(request: Request):
     body = await request.json()
@@ -354,6 +406,28 @@ async def completions(request: Request):
         return JSONResponse(status_code=404, content={
             "error": {"code": 404,
                       "message": "No endpoints found that support file input"}})
+
+    if model == "test/strict-model" and prefs.get("require_parameters"):
+        if "tool_choice" in body:
+            # nessun endpoint dichiara tool_choice: l'imbuto si svuota al
+            # filtro parametri
+            return _routing_refusal(_PARAMS_REFUSED_MSG,
+                                    [("Initial Endpoints", 3)],
+                                    "Filter by Parameters")
+        if "temperature" in body and prefs.get("zdr"):
+            # temperature la accetta un solo endpoint, che non è ZDR: il
+            # filtro parametri restringe, quello privacy azzera — e il
+            # messaggio parla solo di privacy
+            return _routing_refusal(_DATA_POLICY_MSG,
+                                    [("Initial Endpoints", 3),
+                                     ("Filter by Parameters", 1)],
+                                    "Filter by Data Policy")
+
+    if model == "test/nozdr404-model" and (
+            prefs.get("zdr") or prefs.get("data_collection") == "deny"):
+        return _routing_refusal(_DATA_POLICY_MSG,
+                                [("Initial Endpoints", 2)],
+                                "Filter by Data Policy")
 
     if body.get("stream") is False:
         return {"id": "completion-key-check", "model": model,
@@ -519,6 +593,25 @@ async def completions(request: Request):
             else:
                 yield chunk(model, {"content": "Fatto."})
                 yield chunk(model, finish="stop", usage=usage(0.001))
+
+        elif model == "test/strict-model":
+            # niente tool_choice: si ferma solo leggendo i tool result
+            # «budget esaurito», come un modello vero senza il parametro.
+            # TESTARDO: ignora il primo avviso e chiama ancora un tool
+            budget_msgs = sum(
+                1 for m in body["messages"]
+                if m.get("role") == "tool"
+                and "budget_exceeded" in (m.get("content") or ""))
+            if budget_msgs >= (2 if "TESTARDO" in _last_text else 1):
+                yield chunk(model, {"content": "Risposta forzata."})
+                yield chunk(model, finish="stop", usage=usage(0.002))
+            else:
+                yield chunk(model, {"tool_calls": [
+                    {"index": 0, "id": f"call_strict_{n_tool}",
+                     "type": "function",
+                     "function": {"name": "execute_python",
+                                  "arguments": '{"code": "1 + 1"}'}}]})
+                yield chunk(model, finish="tool_calls", usage=usage(0.0005))
 
         elif model == "test/loop-model":
             if body.get("tool_choice") == "none":

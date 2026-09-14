@@ -1,7 +1,8 @@
 """Loop di tool calling (app/openrouter/chat.py) contro il finto OpenRouter e
 la sandbox VERA: accumulo dei frammenti di tool call, echo di
 reasoning_details, esecuzioni reali con artifact, errori pre e mid-stream,
-tetto di iterazioni e tetto di costo, passthrough dei parametri.
+tetto di iterazioni e tetto di costo, passthrough dei parametri, rifiuti di
+routing (scala di rilassamento e spiegazioni).
 
 Il finto OpenRouter (chat_mock_openrouter.py) si avvia da solo: nessun server
 da lanciare a mano, nessun token speso.
@@ -12,6 +13,7 @@ Uso:
     python backend/tests/chat_loop_test.py
 """
 import asyncio
+import inspect
 import json
 import os
 import sys
@@ -29,6 +31,7 @@ sys.path.insert(0, str(HERE))
 
 import httpx                                                     # noqa: E402
 import chat_mock_openrouter as mock                              # noqa: E402
+from app import settings_store                                    # noqa: E402
 from app.openrouter import chat, sandbox                          # noqa: E402
 
 # prefisso dei container diverso da quello di esercizio: così lo sweep degli
@@ -211,6 +214,25 @@ async def async_main():
           reqs[-1].get("tool_choice") == "none"
           and all("tool_choice" not in r for r in reqs[:-1]))
 
+    # --- i tetti sono parametri di esercizio; nessun tetto di tempo ---------
+    sig = inspect.signature(chat.run_turn).parameters
+    check("run_turn: tetti come parametri, niente wall clock",
+          "wall_clock" not in sig
+          and all(k in sig for k in ("max_iter", "exec_timeout",
+                                     "page_max_chars", "cost_limit")))
+    # senza max_iter il loop ricade sul default del REGISTRY (qui il DB non
+    # è inizializzato: settings_store.current risponde col default)
+    default_rounds = settings_store.REGISTRY["chat_max_tool_rounds"]["default"]
+    messages5 = [{"role": "user", "content": "Vai"}]
+    events = await collect(chat.run_turn(
+        "loop-conv-4", messages5, "test/loop-model", "sk-or-test-loop",
+        base_url=mock.BASE_URL))
+    done = events[-1]
+    check("default dei giri dal registro delle Impostazioni",
+          done["iterations"] == default_rounds == 50
+          and done["finish_reason"] == "stop",
+          f"iterations={done['iterations']} default={default_rounds}")
+
     # --- tetto di COSTO + parametri di generazione ---------------------------
     reqs_before = len(sent())
     messages5 = [{"role": "user", "content": "Analizza"}]
@@ -230,6 +252,164 @@ async def async_main():
           "".join(e["delta"] for e in of_type(events, "text")).endswith("42."))
     check("parametri di generazione inoltrati",
           all(r.get("temperature") == 0.3 for r in sent()[reqs_before:]))
+
+    # --- rifiuti di routing: la scala di rilassamento -----------------------
+    # test/strict-model è anthropic/claude-fable-5.1 dal vero (2026-09-11):
+    # dichiara tools ma nessun endpoint dichiara tool_choice, e con
+    # provider.require_parameters la risposta finale forzata moriva con 404
+    # "No endpoints found that can handle the requested parameters" dopo 10
+    # iterazioni di ricerche. Il modello, senza tool_choice, si ferma solo
+    # leggendo i tool result «budget esaurito».
+    def text_of(events):
+        return "".join(e["delta"] for e in of_type(events, "text"))
+
+    def history_valid(messages):
+        """Ogni tool call ha il suo tool result: la storia si può rimandare."""
+        calls = {c["id"] for m in messages if m["role"] == "assistant"
+                 for c in m.get("tool_calls") or ()}
+        results = {m["tool_call_id"] for m in messages if m["role"] == "tool"}
+        return calls == results
+
+    chat._ROUTING_RELAXED.clear()
+    reqs_before = len(sent())
+    messages6 = [{"role": "user", "content": "Vai"}]
+    events = await collect(chat.run_turn(
+        "loop-conv-5", messages6, "test/strict-model", "sk-or-test-loop",
+        base_url=mock.BASE_URL, max_iter=2))
+    reqs = sent()[reqs_before:]
+    check("tool_choice rifiutato dal routing: la risposta arriva comunque",
+          not of_type(events, "error") and text_of(events) == "Risposta forzata."
+          and events[-1]["finish_reason"] == "stop"
+          and history_valid(messages6), repr(text_of(events)))
+    # 2 esecuzioni, 1 call rifiutata per budget, poi [con tool_choice → 404]
+    # e la stessa richiesta senza tool_choice (require_parameters resta)
+    check("gradino 1: si ritenta senza tool_choice, con require_parameters",
+          len(reqs) == 5 and reqs[3].get("tool_choice") == "none"
+          and "tool_choice" not in reqs[4]
+          and reqs[4]["provider"].get("require_parameters") is True
+          and reqs[4]["messages"] == reqs[3]["messages"],
+          f"richieste={len(reqs)}")
+    check("il gradino si ricorda per il modello",
+          chat.routing_level("test/strict-model") == 1
+          and chat.routing_level("test/strict-model",
+                                 {"zdr": True}) == 0)
+
+    reqs_before = len(sent())
+    events = await collect(chat.run_turn(
+        "loop-conv-6", [{"role": "user", "content": "Vai"}],
+        "test/strict-model", "sk-or-test-loop",
+        base_url=mock.BASE_URL, max_iter=2))
+    reqs = sent()[reqs_before:]
+    check("turno successivo: niente tool_choice, nessuna richiesta a vuoto",
+          len(reqs) == 4 and not any("tool_choice" in r for r in reqs)
+          and text_of(events) == "Risposta forzata.",
+          f"richieste={len(reqs)}")
+
+    # il catalogo lo sa prima: supported_parameters senza tool_choice → non
+    # si spedisce nemmeno la prima volta, e il gradino resta 0
+    chat._ROUTING_RELAXED.clear()
+    reqs_before = len(sent())
+    events = await collect(chat.run_turn(
+        "loop-conv-7", [{"role": "user", "content": "Vai"}],
+        "test/strict-model", "sk-or-test-loop",
+        base_url=mock.BASE_URL, max_iter=2,
+        supported_params=["tools", "max_tokens", "temperature"]))
+    reqs = sent()[reqs_before:]
+    check("supported_parameters senza tool_choice: mai spedito",
+          len(reqs) == 4 and not any("tool_choice" in r for r in reqs)
+          and chat.routing_level("test/strict-model") == 0
+          and text_of(events) == "Risposta forzata.",
+          f"richieste={len(reqs)} "
+          f"livello={chat.routing_level('test/strict-model')}")
+
+    # modello TESTARDO: ignora il primo avviso di budget (senza tool_choice
+    # può farlo) e chiama ancora un tool: un'altra possibilità, poi basta
+    reqs_before = len(sent())
+    messages7 = [{"role": "user", "content": "Vai TESTARDO"}]
+    events = await collect(chat.run_turn(
+        "loop-conv-8", messages7, "test/strict-model", "sk-or-test-loop",
+        base_url=mock.BASE_URL, max_iter=1,
+        supported_params=["tools", "max_tokens"]))
+    reqs = sent()[reqs_before:]
+    refused = [e for e in of_type(events, "tool_result")
+               if e["result"]["outcome"] == "budget_exceeded"]
+    check("avviso di budget ignorato: un secondo tentativo, poi la risposta",
+          text_of(events) == "Risposta forzata." and len(refused) == 2
+          and len(reqs) == 4 and events[-1]["finish_reason"] == "stop"
+          and history_valid(messages7),
+          f"richieste={len(reqs)} rifiutate={len(refused)}")
+
+    # parametro utente che restringe l'imbuto sotto ZDR (temperature su
+    # claude-opus-5, max_tokens su gpt-5.5 dal vero): il 404 parla di
+    # "data policy", ma l'imbuto mostra il filtro parametri → gradino 2,
+    # regole privacy intatte
+    chat._ROUTING_RELAXED.clear()
+    strict = {"zdr": True, "data_collection": "deny"}
+    reqs_before = len(sent())
+    events = await collect(chat.run_turn(
+        "loop-conv-9", [{"role": "user", "content": "Vai"}],
+        "test/strict-model", "sk-or-test-loop",
+        base_url=mock.BASE_URL, max_iter=1, provider=strict,
+        params={"temperature": 0.3},
+        supported_params=["tools", "max_tokens", "temperature"]))
+    reqs = sent()[reqs_before:]
+    check("parametro che svuota l'imbuto sotto ZDR: preferenze morbide",
+          not of_type(events, "error") and len(reqs) == 4
+          and reqs[0]["provider"].get("require_parameters") is True
+          and all("require_parameters" not in r["provider"]
+                  for r in reqs[1:])
+          and all(r["provider"].get("zdr") is True
+                  and r["provider"].get("data_collection") == "deny"
+                  and r.get("temperature") == 0.3 for r in reqs)
+          and text_of(events) == "Risposta forzata.",
+          f"richieste={len(reqs)} errori={of_type(events, 'error')}")
+    check("gradino 2 ricordato solo per le regole strette",
+          chat.routing_level("test/strict-model", strict) == 2
+          and chat.routing_level("test/strict-model") == 0)
+
+    # solo privacy: nessun endpoint ZDR, imbuto pieno fino al filtro privacy
+    # → niente da rilassare, una sola richiesta e la spiegazione (oggi
+    # OpenRouter risponde 404, non più 503)
+    reqs_before = len(sent())
+    events = await collect(chat.run_turn(
+        "loop-conv-10", [{"role": "user", "content": "Vai"}],
+        "test/nozdr404-model", "sk-or-test-loop",
+        base_url=mock.BASE_URL, provider=strict))
+    reqs = sent()[reqs_before:]
+    errs = of_type(events, "error")
+    check("solo privacy (404 con imbuto pieno): nessun ritentativo",
+          len(reqs) == 1 and errs and errs[0]["status"] == 404
+          and "Zero Data Retention" in errs[0]["message"]
+          and events[-1]["finish_reason"] == "error"
+          and chat.routing_level("test/nozdr404-model", strict) == 0,
+          f"richieste={len(reqs)} "
+          f"{errs[0]['message'][:60] if errs else 'nessun errore'}")
+
+    # le spiegazioni, a freddo
+    err = chat.or_client.OpenRouterError(
+        "No endpoints found matching your data policy", status=503)
+    check("503 privacy (snapshot 2026-08) spiegato",
+          "Zero Data Retention" in chat._explain(err, {"provider": strict}))
+    err = chat.or_client.OpenRouterError(
+        "No endpoints found that can handle the requested parameters.",
+        status=404, metadata={"failed_routing_step": "Filter by Parameters",
+                              "routing_funnel": [{"step": "Initial Endpoints",
+                                                  "endpoint_count": 4}]})
+    check("404 parametri spiegato",
+          "parametri" in chat._explain(err, {"provider": {}})
+          and chat._params_narrowed(err) is True)
+    err = chat.or_client.OpenRouterError(
+        "No endpoints found matching your data policy", status=404,
+        metadata={"failed_routing_step": "Filter by Data Policy",
+                  "routing_funnel": [{"step": "Initial Endpoints",
+                                      "endpoint_count": 4}]})
+    check("imbuto pieno: i parametri non c'entrano",
+          chat._params_narrowed(err) is False
+          and "Zero Data Retention" in chat._explain(err, {"provider": strict}))
+    err = chat.or_client.OpenRouterError("Provider returned error", status=502)
+    check("un 502 del provider non è un rifiuto di routing",
+          not chat._is_routing_refusal(err)
+          and chat._explain(err, {"provider": strict}) == str(err))
 
 
 def main():

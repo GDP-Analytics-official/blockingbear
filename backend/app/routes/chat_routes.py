@@ -1808,6 +1808,12 @@ async def send_message(conv_id: str, body: MessageIn,
                     modalities.discard("file")
                 reasoning, params = catalog.sanitize_options(options, entry)
                 cents = settings_store.get_int(s, "chat_turn_cost_limit_cents")
+                # gli altri tetti del turno, letti qui (stessa sessione) e
+                # passati al loop: valgono dal messaggio successivo al
+                # salvataggio nel pannello, senza riavvio
+                max_rounds = settings_store.get_int(s, "chat_max_tool_rounds")
+                exec_timeout = settings_store.get_int(s, "chat_exec_timeout_s")
+                page_chars = settings_store.get_int(s, "chat_web_page_max_chars")
                 attach_mb = settings_store.get_int(s, "chat_model_attach_mb")
                 history = _history(s, conv_id, modalities,
                                    attach_mb * 1024 * 1024)
@@ -1878,7 +1884,15 @@ async def send_message(conv_id: str, body: MessageIn,
                             files=files or None, tools=tools,
                             reasoning=reasoning, params=params,
                             provider=provider_prefs,
+                            # i parametri che il catalogo dichiara per il
+                            # modello: il loop non spedisce tool_choice a
+                            # chi non lo elenca (vedi la scala di routing
+                            # in chat.py)
+                            supported_params=(entry or {}).get(
+                                "supported_parameters"),
                             cost_limit=(cents / 100.0) if cents else None,
+                            max_iter=max_rounds, exec_timeout=exec_timeout,
+                            page_max_chars=page_chars,
                             anonymized=anonymized, scope=scope,
                             cancel=cancel):
                         await events.put(ev)

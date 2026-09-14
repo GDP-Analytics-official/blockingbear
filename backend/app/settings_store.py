@@ -144,6 +144,33 @@ REGISTRY = {
                 "smettere di eseguire codice e rispondere con quello che ha "
                 "(la risposta arriva comunque). 0 = nessun tetto.",
     },
+    # Gli altri tetti del loop agentico (openrouter/chat.py, run_turn): quanti
+    # giri di strumenti per risposta, quanto può durare una singola
+    # esecuzione di codice, quanto testo di una pagina web entra nel
+    # contesto. Non esiste un tetto sul tempo TOTALE del turno: una risposta
+    # la chiudono solo questi, il tetto di spesa e il bottone «ferma».
+    "chat_max_tool_rounds": {
+        "default": 50,
+        "min": 1,
+        "section": "chat",
+        "label": "Giri di strumenti per singola risposta (massimo)",
+        "help": "Ogni esecuzione di codice, ricerca o lettura di una pagina "
+                "è un giro, e ogni giro rispedisce al modello tutta la "
+                "conversazione. Raggiunto il massimo, al modello viene detto "
+                "di smettere di usare gli strumenti e rispondere con quello "
+                "che ha (la risposta arriva comunque). Vale insieme al tetto "
+                "di spesa: la risposta si chiude al primo dei due.",
+    },
+    "chat_exec_timeout_s": {
+        "default": 300,
+        "min": 5,
+        "section": "chat",
+        "label": "Timeout di una singola esecuzione di codice (secondi)",
+        "help": "Oltre, l'esecuzione viene interrotta e il modello riceve un "
+                "esito «timeout»; l'ambiente sopravvive, con le variabili "
+                "già calcolate. Alzare se il modello lavora su file grandi o "
+                "converte documenti con LibreOffice nella sandbox.",
+    },
     "chat_model_attach_mb": {
         "default": 8,
         "min": 1,
@@ -171,6 +198,17 @@ REGISTRY = {
                 "uscita. Sui valori non ancora noti al registro la "
                 "protezione del testo web è best-effort. Ogni utente può "
                 "spegnere la ricerca nella singola conversazione.",
+    },
+    "chat_web_page_max_chars": {
+        "default": 25000,
+        "min": 1000,
+        "section": "chat",
+        "label": "Lunghezza massima di una pagina web letta (caratteri)",
+        "help": "Il testo oltre il tetto viene tagliato, con una nota che "
+                "riporta la lunghezza totale. Ogni pagina letta resta nella "
+                "conversazione e si paga come token in tutte le richieste "
+                "successive: abbassare per spendere meno nelle ricerche "
+                "lunghe, alzare se al modello sfugge il fondo delle pagine.",
     },
     "chat_ai_marking": {
         "default": 1,

@@ -124,10 +124,6 @@ SANDBOX_MAX = max(1, int(os.environ.get("BLOCKINGBEAR_SANDBOX_MAX") or 4))
 # assegnato (i container in pool non scadono, solo riciclo periodico)
 SANDBOX_IDLE_MIN = max(1, int(os.environ.get("BLOCKINGBEAR_SANDBOX_IDLE_MIN") or 60))
 SANDBOX_MEM = (os.environ.get("BLOCKINGBEAR_SANDBOX_MEM") or "2g").strip()
-# secondi per singola esecuzione di codice (il kernel interrompe e sopravvive)
-SANDBOX_EXEC_TIMEOUT = max(5, int(os.environ.get("BLOCKINGBEAR_SANDBOX_EXEC_TIMEOUT") or 120))
-# iterazioni massime del loop agentico per messaggio utente (usato da chat.py)
-SANDBOX_MAX_ITER = max(1, int(os.environ.get("BLOCKINGBEAR_SANDBOX_MAX_ITER") or 12))
 
 # --- Browser camofox per la ricerca web -------------------------------------
 # Tutte OPZIONALI, stessa filosofia della sandbox: la ricerca web è una
@@ -145,10 +141,6 @@ CAMOFOX_IMAGE = (os.environ.get("BLOCKINGBEAR_CAMOFOX_IMAGE")
 # porta HOST (bind su 127.0.0.1) del container gestito
 CAMOFOX_PORT = max(1, int(os.environ.get("BLOCKINGBEAR_CAMOFOX_PORT") or 9377))
 CAMOFOX_MEM = (os.environ.get("BLOCKINGBEAR_CAMOFOX_MEM") or "2g").strip()
-# tetto di caratteri di una pagina letta con read_page (oltre: troncata con
-# nota, stesso stile del kernel sandbox). È l'unica leva nuova sui token.
-WEB_PAGE_MAX_CHARS = max(1000, int(os.environ.get("BLOCKINGBEAR_WEB_PAGE_MAX_CHARS")
-                                   or 25000))
 # Motore di ricerca: template con {q} al posto della query (URL-encoded).
 # Default DuckDuckGo versione HTML: privacy dichiarata, niente JS, estrazione
 # robusta.

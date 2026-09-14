@@ -32,7 +32,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Awaitable, Callable
 
-from ..config import WEB_PAGE_MAX_CHARS
+from .. import settings_store
 from ..engine import image_ocr
 from ..engine.mupdf_lock import MUPDF_LOCK
 from . import browser, sandbox
@@ -394,10 +394,14 @@ async def _read_page(conv_id, args, ctx):
     except browser.BrowserError as e:
         return _web_error(str(e), started)
     content = page["text"]
+    # il tetto arriva col turno (chat.py lo legge dal parametro di esercizio
+    # e lo mette nel ctx); i chiamanti diretti ricadono sul valore corrente
+    cap = int(ctx.get("page_max_chars")
+              or settings_store.current("chat_web_page_max_chars"))
     total = max(len(content), page.get("total") or 0)
-    truncated = total > min(len(content), WEB_PAGE_MAX_CHARS)
+    truncated = total > min(len(content), cap)
     if truncated:
-        content = (content[:WEB_PAGE_MAX_CHARS] +
+        content = (content[:cap] +
                    "\n…[pagina troncata: {} caratteri totali]…".format(
                        total))
     title, final_url = page.get("title") or "", page.get("url") or url

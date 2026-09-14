@@ -455,20 +455,17 @@ def main():
           and "Mario Rossi" in json.dumps(res, ensure_ascii=False))
 
     # --- troncamento della pagina --------------------------------------------
-    real_cap = or_tools.WEB_PAGE_MAX_CHARS
-    or_tools.WEB_PAGE_MAX_CHARS = 20
-    try:
-        res = run(rp.handler(cid, {"url": "https://esempio.it/lunga"},
-                             plain_ctx))
-    finally:
-        or_tools.WEB_PAGE_MAX_CHARS = real_cap
+    # il tetto viaggia nel ctx del turno: chat.py lo legge dal parametro di
+    # esercizio chat_web_page_max_chars e lo passa ai handler
+    res = run(rp.handler(cid, {"url": "https://esempio.it/lunga"},
+                         {**plain_ctx, "page_max_chars": 20}))
     check("pagina troncata con nota (stile kernel)",
           res["truncated"] is True
           and "…[pagina troncata: 61 caratteri totali]…" in res["content"]
           and res["content"].startswith(PAGE["text"][:20]),
           res["content"][:80])
 
-    # Camofox can return less than WEB_PAGE_MAX_CHARS while still reporting
+    # Camofox can return less than the page cap while still reporting
     # a larger source total. The tool must disclose that earlier truncation.
     saved_page = dict(PAGE)
     try:

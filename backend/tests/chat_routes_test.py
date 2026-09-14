@@ -139,7 +139,7 @@ def main():
     plain = next(m for m in r["models"] if m["id"] == "test/plain-model")
     nozdr = next(m for m in r["models"] if m["id"] == "test/nozdr-model")
     check("catalogo da /models/user", r["source"] == "user"
-          and len(r["models"]) == 7)
+          and len(r["models"]) == 9)
     check("capability derivate", happy["tools"] is True
           and happy["reasoning"]["supported_efforts"] == ["high", "medium",
                                                           "low"]
@@ -472,11 +472,44 @@ def main():
     with SessionLocal() as s:
         vals = {k: settings_store.get_int(s, k) for k in
                 ("chat_max_upload_mb", "chat_turn_cost_limit_cents",
-                 "chat_model_attach_mb")}
+                 "chat_model_attach_mb", "chat_max_tool_rounds",
+                 "chat_exec_timeout_s", "chat_web_page_max_chars")}
     check("parametri di esercizio della chat leggibili",
           vals == {"chat_max_upload_mb": 20,
                    "chat_turn_cost_limit_cents": 100,
-                   "chat_model_attach_mb": 8}, json.dumps(vals))
+                   "chat_model_attach_mb": 8,
+                   "chat_max_tool_rounds": 50,
+                   "chat_exec_timeout_s": 300,
+                   "chat_web_page_max_chars": 25000}, json.dumps(vals))
+
+    # --- il tetto di giri arriva dal pannello e vale dal messaggio dopo ----------
+    # (test/loop-model non sta nel catalogo: l'admin può sceglierlo comunque e
+    # il turno parte con entry=None, tool dichiarati "in dubbio")
+    with SessionLocal() as s:
+        settings_store.set_values(s, {"chat_max_tool_rounds": 1})
+    loop_conv = client.post("/api/chats", json={}, headers=auth).json()
+    client.patch(f"/api/chats/{loop_conv['id']}",
+                 json={"model": "test/loop-model"}, headers=auth)
+    try:
+        with client.stream("POST", f"/api/chats/{loop_conv['id']}/messages",
+                           json={"content": "Vai"}, headers=auth) as resp:
+            loop_events = sse_events(resp)
+    finally:
+        with SessionLocal() as s:
+            settings_store.set_values(s, {
+                "chat_max_tool_rounds":
+                    settings_store.REGISTRY["chat_max_tool_rounds"]["default"]})
+    loop_results = of_type(loop_events, "tool_result")
+    refused = [e for e in loop_results
+               if e["result"]["outcome"] == "budget_exceeded"]
+    loop_text = "".join(e["delta"] for e in of_type(loop_events, "text"))
+    check("tetto di giri letto dalle Impostazioni: 1 giro, poi rifiuto",
+          len(loop_results) == 2 and len(refused) == 1
+          and loop_results[0]["result"]["outcome"] != "budget_exceeded"
+          and loop_events[-1]["type"] == "done"
+          and loop_text == "Risposta forzata.",
+          f"results={len(loop_results)} refused={len(refused)} "
+          f"text={loop_text!r}")
 
     # --- anonimizzazione: proprietà della CONVERSAZIONE ------------------------
     # Stub del solo turno di anonimizzazione: qui interessa il cablaggio

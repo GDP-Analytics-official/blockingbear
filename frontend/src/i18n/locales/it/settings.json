@@ -54,6 +54,14 @@
       "label": "Tetto di spesa per singola risposta (centesimi di dollaro)",
       "help": "Una risposta può costare più di quanto sembri: il modello esegue codice più volte e ogni giro rispedisce tutta la conversazione. Raggiunto il tetto, al modello viene detto di smettere di eseguire codice e rispondere con quello che ha (la risposta arriva comunque). 0 = nessun tetto."
     },
+    "chat_max_tool_rounds": {
+      "label": "Giri di strumenti per singola risposta (massimo)",
+      "help": "Ogni esecuzione di codice, ricerca o lettura di una pagina è un giro, e ogni giro rispedisce al modello tutta la conversazione. Raggiunto il massimo, al modello viene detto di smettere di usare gli strumenti e rispondere con quello che ha (la risposta arriva comunque). Vale insieme al tetto di spesa: la risposta si chiude al primo dei due."
+    },
+    "chat_exec_timeout_s": {
+      "label": "Timeout di una singola esecuzione di codice (secondi)",
+      "help": "Oltre, l'esecuzione viene interrotta e il modello riceve un esito «timeout»; l'ambiente sopravvive, con le variabili già calcolate. Alzare se il modello lavora su file grandi o converte documenti con LibreOffice nella sandbox."
+    },
     "chat_model_attach_mb": {
       "label": "Dimensione massima di un file inviato al modello (MB)",
       "help": "Immagini e PDF vengono mostrati DIRETTAMENTE al modello (se lo supporta), quindi viaggiano in ogni richiesta del turno e si pagano come token: oltre questa soglia il file resta solo nella sandbox, dove il modello lo apre con del codice."
@@ -61,6 +69,10 @@
     "chat_web_search": {
       "label": "Consenti la ricerca web nelle chat",
       "help": "Aggiunge al modello due strumenti di sola lettura (ricerca e lettura pagine) tramite un browser locale al server. ATTENZIONE alle chat anonimizzate: le query di ricerca escono verso il motore (DuckDuckGo) con i valori REALI — la protezione vale sul percorso verso il provider LLM, che continua a vedere solo segnaposto: i contenuti scaricati dal web rientrano anonimizzati e passano dal controllo di uscita. Sui valori non ancora noti al registro la protezione del testo web è best-effort. Ogni utente può spegnere la ricerca nella singola conversazione."
+    },
+    "chat_web_page_max_chars": {
+      "label": "Lunghezza massima di una pagina web letta (caratteri)",
+      "help": "Il testo oltre il tetto viene tagliato, con una nota che riporta la lunghezza totale. Ogni pagina letta resta nella conversazione e si paga come token in tutte le richieste successive: abbassare per spendere meno nelle ricerche lunghe, alzare se al modello sfugge il fondo delle pagine."
     },
     "chat_ai_marking": {
       "label": "Marca i file generati dall'AI (AI Act, art. 50)",
